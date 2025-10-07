@@ -6,6 +6,7 @@ import DcCore
 import SDWebImageWebPCoder
 import Intents
 import SDWebImageSVGKitPlugin
+import Privitty
 
 let logger = getDcLogger()
 
@@ -23,6 +24,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationCenterD
     var applicationInForeground: Bool = false
     private var launchOptions: [UIApplication.LaunchOptionsKey: Any]?
     private var appFullyInitialized = false
+    private var privittyCore: PrivittyCore?
 
     // purpose of `bgIoTimestamp` is to block rapidly subsequent calls to remote- or local-wakeups:
     //
@@ -75,6 +77,20 @@ class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationCenterD
 
         self.launchOptions = launchOptions
         continueDidFinishLaunchingWithOptions()
+
+        privittyCore = PrivittyCore(baseDirectory: FileHelper.applicationSupportPath())
+
+        guard let core = privittyCore else {
+            logger.error("Failed to create PrivittyCore")
+            fatalError("PrivittyCore not created in app delegate")
+        }
+        logger.info("PrivittyCore created successfully")
+
+        // Privitty version
+        if let version = core.getVersion() {
+            logger.info("Privitty Version: \(version)")
+        }
+
         return true
     }
 

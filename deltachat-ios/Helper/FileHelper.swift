@@ -101,4 +101,12 @@ public class FileHelper {
             return src
         }
     }
+
+    // Returns the absolute path to the Application Support directory.
+    static func applicationSupportPath() -> String {
+        let appSupportURL = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
+        // Ensure the directory exists
+        try? FileManager.default.createDirectory(at: appSupportURL, withIntermediateDirectories: true)
+        return appSupportURL.path
+    }
 }

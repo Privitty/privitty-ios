@@ -1,0 +1,9 @@
+framework module Privitty {
+    umbrella header "Privitty.h"
+    
+    export *
+    module * { export * }
+    
+    link framework "Foundation"
+    link framework "Security"
+}
