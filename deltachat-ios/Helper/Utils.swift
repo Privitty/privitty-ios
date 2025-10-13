@@ -194,4 +194,11 @@ struct Utils {
             callback()
         }
     }
+      
+    public static func jsonify(_ jsonString: String) -> String {
+        // Replace single quotes with double quotes: naive approach for simple JSON
+        // This assumes single quotes are only used for keys and string values
+        let fixedJson = jsonString.replacingOccurrences(of: "'", with: "\"")
+        return fixedJson
+    }
 }

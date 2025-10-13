@@ -24,7 +24,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationCenterD
     var applicationInForeground: Bool = false
     private var launchOptions: [UIApplication.LaunchOptionsKey: Any]?
     private var appFullyInitialized = false
-    private var privittyCore: PrivittyCore?
+    var privittyCore: PrivittyCore?
 
     // purpose of `bgIoTimestamp` is to block rapidly subsequent calls to remote- or local-wakeups:
     //
@@ -90,7 +90,9 @@ class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationCenterD
         if let version = core.getVersion() {
             logger.info("Privitty Version: \(version)")
         }
-
+        NSLog("system staus", core.getSystemStatus())
+        NSLog("system health", core.getHealthStatus())
+    
         return true
     }
 
@@ -611,9 +613,77 @@ class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationCenterD
             guard let self else { return }
             let eventHandler = DcEventHandler(dcAccounts: self.dcAccounts)
             let eventEmitter = self.dcAccounts.getEventEmitter()
+            let dcContext = dcAccounts.getSelected()
             logger.info("➡️ event emitter started")
             while !shouldShutdownEventLoop {
                 guard let event = eventEmitter.getNextEvent() else { break }
+                
+                // Privitty incoming events handling
+                if event.id == DC_EVENT_INCOMING_MSG {
+                    let chatIdInt = event.data1Int  // chat ID
+                    let msgIdInt = event.data2Int   // message ID
+                    let dcMsg = dcContext.getMessage(id: msgIdInt)
+                    
+                    if dcMsg.showPadlock() && !dcContext.getChat(chatId: chatIdInt).isContactRequest {
+                        do {
+                            logger.debug("Privitty: isSecure(): \(dcMsg.showPadlock())")
+                            let jsonifiedSubject = Utils.jsonify(dcMsg.subject)
+                            
+                            if let data = jsonifiedSubject.data(using: .utf8),
+                               let jSubject = try JSONSerialization.jsonObject(with: data, options: []) as? [String: Any],
+                               let privittyValue = jSubject["privitty"] as? String,
+                               privittyValue.lowercased() == "true",
+                               let typeValue = jSubject["type"] as? String {
+                                
+                                if typeValue.lowercased() == "new_peer_concluded" {
+                                    logger.debug("Privitty: message -> new_peer_concluded, ignore it")
+                                    continue
+                                } else if typeValue.lowercased() == "new_group_concluded" {
+                                    logger.debug("Privitty: message -> new_group_concluded, ignore it")
+                                    continue
+                                }
+                                logger.debug("Privitty: message -> punt it to libpriv. Sub: \(dcMsg.subject)")
+                                
+                                if let text = dcMsg.text {
+                                    guard let chatId = Int32(exactly: chatIdInt),
+                                          let fromId = Int32(exactly: dcMsg.fromContactId),
+                                          let msgId = Int32(exactly: dcMsg.id) else {
+                                        logger.error("Privitty: ID overflow error")
+                                        continue
+                                    }
+                                    
+                                    let dcMsg = dcContext.getMessage(id: msgIdInt)
+                                    let messageBytes = dcMsg.text
+                                    
+                                    if ((privittyCore?.isPrivittyMessage(with: messageBytes)) != nil) {
+                                        NSLog("Privitty message for chatId: \(chatId)")
+                                        
+                                        var prvMessage: [String: Any] = [
+                                            "chat_id": String(chatId),
+                                            "direction": "incoming",
+                                            "pdu": messageBytes ?? ""
+                                        ]
+                                        
+                                        let jsonData = try JSONSerialization.data(withJSONObject: prvMessage, options: [])
+                                        guard let jsonStringMsg = String(data: jsonData, encoding: .utf8) else {
+                                            NSLog("Failed to serialize prvMessage JSON")
+                                            continue
+                                        }
+                                        
+                                        let responseString = privittyCore?.processMessage(withData: jsonStringMsg)
+                                        NSLog("Response: \(responseString ?? [:])")
+                                        continue
+                                    } else {
+                                        logger.debug("Privitty: Failed to decode Base64 message text")
+                                    }
+                                }
+                            }
+                        } catch {
+                            logger.debug("Privitty: Exception in Privitty message: \(error.localizedDescription)")
+                        }
+                    }
+                }
+                
                 eventHandler.handleEvent(event: event)
             }
             logger.info("⬅️ event emitter finished")
@@ -621,6 +691,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationCenterD
             eventHandlerActive = false
         }
     }
+
 
     private func uninstallEventHandler() {
         shouldShutdownEventLoop = true

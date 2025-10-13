@@ -1172,6 +1172,25 @@ class ChatViewController: UITableViewController, UITableViewDropDelegate {
     }
 
     private func clipperButtonMenu() -> UIMenu {
+        // TODO: Need to handle here one condition after api is ready from backend side its called only one time
+        if let appDelegate = UIApplication.shared.delegate as? AppDelegate,
+           let privittyCore = appDelegate.privittyCore {
+
+            if let response = privittyCore.createPeerAddRequest(
+                withChatId: String(dcChat.id), // String(chatId),
+                peerName: dcChat.name, // dcContext.displayname,
+                peerEmail: "test@test.com",
+                peerId: "@test"
+            ), !response.isEmpty {
+                NSLog("Peer Add Request created: \(response)")
+            } else {
+                NSLog("Failed to create Peer Add Request")
+            }
+            
+        } else {
+            NSLog("Failed to get AppDelegate or privittyCore")
+        }
+  
         var actions = [UIMenuElement]()
         func action(_ localized: String, _ systemImage: String, attributes: UIMenuElement.Attributes = [], _ handler: @escaping () -> Void) -> UIAction {
             UIAction(title: String.localized(localized), image: UIImage(systemName: systemImage), attributes: attributes, handler: { _ in handler() })
