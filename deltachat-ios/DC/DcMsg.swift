@@ -347,7 +347,11 @@ public class DcMsg {
     public func showEnvelope() -> Bool {
         return dc_msg_get_showpadlock(messagePointer) == 0 && downloadState == DC_DOWNLOAD_DONE
     }
-
+    
+    public func showPadlock() -> Bool {
+        return dc_msg_get_showpadlock(messagePointer) == 1
+    }
+    
     public func getVideoChatUrl() -> String {
         guard let cString = dc_msg_get_videochat_url(messagePointer) else { return "" }
         let swiftString = String(cString: cString)
