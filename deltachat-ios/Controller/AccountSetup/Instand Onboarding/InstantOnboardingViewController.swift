@@ -306,6 +306,16 @@ class InstantOnboardingViewController: UIViewController {
 
     private func storeImageAndName() {
         dcContext.displayname = contentView?.nameTextField.text
+
+        // Create/switch Privitty user profile.
+        if let username = contentView?.nameTextField.text, !username.isEmpty {
+            let success = PrvContext.shared.createOrSwitchUser(username: username)
+            if success {
+                logger.info("Privitty user created/switched successfully: \(username)")
+            } else {
+                logger.error("Failed to create/switch Privitty user: \(username)")
+            }
+        }
     }
 }
 

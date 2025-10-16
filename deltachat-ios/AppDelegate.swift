@@ -6,7 +6,6 @@ import DcCore
 import SDWebImageWebPCoder
 import Intents
 import SDWebImageSVGKitPlugin
-import Privitty
 
 let logger = getDcLogger()
 
@@ -24,7 +23,6 @@ class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationCenterD
     var applicationInForeground: Bool = false
     private var launchOptions: [UIApplication.LaunchOptionsKey: Any]?
     private var appFullyInitialized = false
-    private var privittyCore: PrivittyCore?
 
     // purpose of `bgIoTimestamp` is to block rapidly subsequent calls to remote- or local-wakeups:
     //
@@ -78,17 +76,8 @@ class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationCenterD
         self.launchOptions = launchOptions
         continueDidFinishLaunchingWithOptions()
 
-        privittyCore = PrivittyCore(baseDirectory: FileHelper.applicationSupportPath())
-
-        guard let core = privittyCore else {
-            logger.error("Failed to create PrivittyCore")
-            fatalError("PrivittyCore not created in app delegate")
-        }
-        logger.info("PrivittyCore created successfully")
-
-        // Privitty version
-        if let version = core.getVersion() {
-            logger.info("Privitty Version: \(version)")
+        if !PrvContext.shared.initialize() {
+            logger.error("APP DELEGATE: Failed to initialize Privitty Core")
         }
 
         return true
@@ -187,6 +176,19 @@ class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationCenterD
         if dcAccounts.getSelected().isConfigured() {
             registerForNotifications()
             prepopulateWidget()
+
+            // Ensure Privitty user is selected after account is configured
+            let dcContext = dcAccounts.getSelected()
+            if let username = dcContext.displayname, !username.isEmpty {
+                let success = PrvContext.shared.ensureUserSetup(username: username)
+                if success {
+                    logger.info("Privitty user selected on app launch: \(username)")
+                } else {
+                    logger.error("Failed to select Privitty user on app launch: \(username)")
+                }
+            } else {
+                logger.warning("No displayname set, Privitty user not selected on app launch")
+            }
         }
 
         launchOptions = nil
@@ -593,6 +595,17 @@ class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationCenterD
         _ = RelayHelper.setup(dcAccounts.getSelected())
         if dcAccounts.getSelected().isConfigured() {
             appCoordinator.resetTabBarRootViewControllers()
+
+            // Ensure Privitty user is selected after account reload
+            let dcContext = dcAccounts.getSelected()
+            if let username = dcContext.displayname, !username.isEmpty {
+                let success = PrvContext.shared.ensureUserSetup(username: username)
+                if success {
+                    logger.info("Privitty user selected on context reload: \(username)")
+                } else {
+                    logger.error("Failed to select Privitty user on context reload: \(username)")
+                }
+            }
         } else {
             appCoordinator.presentWelcomeController(accountCode: accountCode)
         }
@@ -611,9 +624,53 @@ class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationCenterD
             guard let self else { return }
             let eventHandler = DcEventHandler(dcAccounts: self.dcAccounts)
             let eventEmitter = self.dcAccounts.getEventEmitter()
+            let dcContext = dcAccounts.getSelected()
             logger.info("➡️ event emitter started")
             while !shouldShutdownEventLoop {
                 guard let event = eventEmitter.getNextEvent() else { break }
+
+                // -- Privitty message handling start --
+                if event.id == DC_EVENT_INCOMING_MSG {
+                    let chatId = event.data1Int
+                    let msgId = event.data2Int
+                    let dcMsg = dcContext.getMessage(id: msgId)
+
+                    // Check if message is encrypted and not a contact request
+                    if dcMsg.showEnvelope() && !dcContext.getChat(chatId: chatId).isContactRequest {
+                        logger.debug("Privitty: Encrypted message received")
+
+                        if let messageText = dcMsg.text,
+                           PrvContext.shared.isPrivittyMessage(messageText) {
+                            logger.debug("Privitty: Message detected for chatId: \(chatId)")
+
+                            // Process the Privitty message
+                            let result = PrvContext.shared.processIncomingMessage(pdu: messageText)
+
+                            if result.success {
+                                logger.info("Privitty: Message processed successfully")
+
+                                // Check if response has PDU to send back
+                                if let data = result.data,
+                                   let dataData = data["data"] as? [String: Any],
+                                   let pdu = dataData["pdu"] as? String {
+                                    logger.debug("Privitty: PDU size: \(pdu.count)")
+
+                                    // Send the PDU message back to the chat
+                                    let responseMsg = dcContext.newMessage(viewType: DC_MSG_TEXT)
+                                    responseMsg.text = pdu
+                                    dcContext.sendMessage(chatId: chatId, message: responseMsg)
+                                    logger.info("Privitty: Response message sent to chat \(chatId)")
+                                }
+                            } else {
+                                logger.error("Privitty: Failed to process message: \(result.error ?? "Unknown error")")
+                            }
+                        } else {
+                            logger.debug("Privitty: Not a Privitty message")
+                        }
+                    }
+                }
+                // -- Privitty message handling end --
+
                 eventHandler.handleEvent(event: event)
             }
             logger.info("⬅️ event emitter finished")
