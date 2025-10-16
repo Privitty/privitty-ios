@@ -68,6 +68,11 @@ FOUNDATION_EXPORT const unsigned char PrivittyVersionString[];
 // Profile switching
 - (BOOL)switchProfileWithUsername:(NSString*)username;
 
+// Chat operations
+- (BOOL)isChatProtected:(NSString*)chatId;
+
+- (NSDictionary*)deleteChatRoomWithChatId:(NSString*)chatId;
+
 // Configuration management
 - (BOOL)setConfigWithKey:(NSString*)key value:(NSDictionary*)value;
 

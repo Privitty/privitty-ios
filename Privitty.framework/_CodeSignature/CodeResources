@@ -6,7 +6,7 @@
 	<dict>
 		<key>Headers/Privitty.h</key>
 		<data>
-		ewRK5UyR3egeCNJHlSNC1EAqgPs=
+		yV1hZOtzjZjQHy9SkNMDaMXQTjM=
 		</data>
 		<key>Info.plist</key>
 		<data>
@@ -23,11 +23,11 @@
 		<dict>
 			<key>hash</key>
 			<data>
-			ewRK5UyR3egeCNJHlSNC1EAqgPs=
+			yV1hZOtzjZjQHy9SkNMDaMXQTjM=
 			</data>
 			<key>hash2</key>
 			<data>
-			ZvSjPecNLZo6dJ6hG42yYu5OI0tbKtlJ97tioDEOgDc=
+			XS74yw4Y9CfNvgvvBX2BNfPiqwoodcHYxeHWjXMremw=
 			</data>
 		</dict>
 		<key>Modules/module.modulemap</key>
