@@ -308,8 +308,8 @@ class InstantOnboardingViewController: UIViewController {
         dcContext.displayname = contentView?.nameTextField.text        
         let appDelegate = UIApplication.shared.delegate as? AppDelegate
         let success = appDelegate?.privittyCore?.switchProfile(withUsername: dcContext.displayname)
-        NSLog((success ?? false) ? "Profile created" : "Failed")
-        NSLog(appDelegate?.privittyCore?.getCurrentUser() ?? "")
+        logger.info((success ?? false) ? "Profile created" : "Failed")
+        logger.info(appDelegate?.privittyCore?.getCurrentUser() ?? "")
     }
 }
 

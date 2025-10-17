@@ -80,6 +80,8 @@ class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationCenterD
 
         privittyCore = PrivittyCore(baseDirectory: FileHelper.applicationSupportPath())
 
+        initializePrivittyCore()
+        
         guard let core = privittyCore else {
             logger.error("Failed to create PrivittyCore")
             fatalError("PrivittyCore not created in app delegate")
@@ -90,10 +92,20 @@ class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationCenterD
         if let version = core.getVersion() {
             logger.info("Privitty Version: \(version)")
         }
-        NSLog("system staus", core.getSystemStatus())
-        NSLog("system health", core.getHealthStatus())
-    
+        logger.info("System status: \(core.getSystemStatus() ?? [:])")
+        logger.info("System health: \(core.getHealthStatus() ?? [:])")
+
         return true
+    }
+    
+    public func initializePrivittyCore() {
+            let baseDir = FileHelper.applicationSupportPath()
+            let core = PrivittyCore(baseDirectory: baseDir)
+
+        if !(privittyCore?.isInitialized() ?? false) {
+            print("PrivittyCore initialized successfully.")
+            self.privittyCore = core
+        }
     }
 
     // finishes the app initialization which depends on the successful access to the keychain
@@ -618,68 +630,69 @@ class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationCenterD
             while !shouldShutdownEventLoop {
                 guard let event = eventEmitter.getNextEvent() else { break }
                 
-                // Privitty incoming events handling
                 if event.id == DC_EVENT_INCOMING_MSG {
-                    let chatIdInt = event.data1Int  // chat ID
-                    let msgIdInt = event.data2Int   // message ID
+                    let chatIdInt = event.data1Int  // Chat ID
+                    let msgIdInt = event.data2Int   // Message ID
                     let dcMsg = dcContext.getMessage(id: msgIdInt)
-                    
-                    if dcMsg.showPadlock() && !dcContext.getChat(chatId: chatIdInt).isContactRequest {
+
+                    // Check if message is encrypted and not a contact request
+                    if dcMsg.showPadlock(), !dcContext.getChat(chatId: chatIdInt).isContactRequest {
                         do {
-                            logger.debug("Privitty: isSecure(): \(dcMsg.showPadlock())")
-                            let jsonifiedSubject = Utils.jsonify(dcMsg.subject)
+                            logger.debug("Privitty App: Encrypted or guaranteed E2E message")
                             
-                            if let data = jsonifiedSubject.data(using: .utf8),
-                               let jSubject = try JSONSerialization.jsonObject(with: data, options: []) as? [String: Any],
-                               let privittyValue = jSubject["privitty"] as? String,
-                               privittyValue.lowercased() == "true",
-                               let typeValue = jSubject["type"] as? String {
-                                
-                                if typeValue.lowercased() == "new_peer_concluded" {
-                                    logger.debug("Privitty: message -> new_peer_concluded, ignore it")
-                                    continue
-                                } else if typeValue.lowercased() == "new_group_concluded" {
-                                    logger.debug("Privitty: message -> new_group_concluded, ignore it")
-                                    continue
+                            logger.debug("Privitty App: Incoming message in chat \(chatIdInt)")
+                            logger.debug("Privitty App: Padlock shown? \(dcMsg.showPadlock())")
+                            logger.debug("Privitty App: Is contact request? \(dcContext.getChat(chatId: chatIdInt).isContactRequest)")
+
+                            guard let messageBytes = dcMsg.text else {
+                                logger.debug("Privitty App: No message text found")
+                                return
+                            }
+
+                            logger.debug("Privitty App: Message text: \(messageBytes)")
+                            // Check if it's a Privitty message
+                            if let privittyCore = privittyCore, privittyCore.isPrivittyMessage(with: messageBytes) {
+                                logger.info("Privitty App: Detected Privitty message for chatId: \(chatIdInt)")
+
+                                // Prepare message payload
+                                let prvMessage: [String: Any] = [
+                                    "chat_id": String(chatIdInt),
+                                    "direction": "incoming",
+                                    "pdu": messageBytes
+                                ]
+
+                                // Convert dictionary to JSON string
+                                let jsonData = try JSONSerialization.data(withJSONObject: prvMessage, options: [])
+                                guard let jsonStringMsg = String(data: jsonData, encoding: .utf8) else {
+                                    logger.error("Privitty App: Failed to encode message JSON")
+                                    return
                                 }
-                                logger.debug("Privitty: message -> punt it to libpriv. Sub: \(dcMsg.subject)")
-                                
-                                if let text = dcMsg.text {
-                                    guard let chatId = Int32(exactly: chatIdInt),
-                                          let fromId = Int32(exactly: dcMsg.fromContactId),
-                                          let msgId = Int32(exactly: dcMsg.id) else {
-                                        logger.error("Privitty: ID overflow error")
-                                        continue
-                                    }
-                                    
-                                    let dcMsg = dcContext.getMessage(id: msgIdInt)
-                                    let messageBytes = dcMsg.text
-                                    
-                                    if ((privittyCore?.isPrivittyMessage(with: messageBytes)) != nil) {
-                                        NSLog("Privitty message for chatId: \(chatId)")
-                                        
-                                        var prvMessage: [String: Any] = [
-                                            "chat_id": String(chatId),
-                                            "direction": "incoming",
-                                            "pdu": messageBytes ?? ""
-                                        ]
-                                        
-                                        let jsonData = try JSONSerialization.data(withJSONObject: prvMessage, options: [])
-                                        guard let jsonStringMsg = String(data: jsonData, encoding: .utf8) else {
-                                            NSLog("Failed to serialize prvMessage JSON")
-                                            continue
-                                        }
-                                        
-                                        let responseString = privittyCore?.processMessage(withData: jsonStringMsg)
-                                        NSLog("Response: \(responseString ?? [:])")
-                                        continue
-                                    } else {
-                                        logger.debug("Privitty: Failed to decode Base64 message text")
-                                    }
+
+                                // Process the message via privittyCore
+                                let responseDict = privittyCore.processMessage(withData: jsonStringMsg)
+                                logger.info("Privitty App: Response - \(responseDict ?? [:])")
+
+                                // Extract nested data.pdu from response
+                                if let dataObj = responseDict?["data"] as? [String: Any],
+                                   let innerData = dataObj["data"] as? [String: Any],
+                                   let pdu = innerData["pdu"] as? String {
+
+                                    logger.info("Privitty App: Sending PDU of size \(pdu.count)")
+
+                                    // Create new message and send it
+                                    let newMsg = dcContext.newMessage(viewType: DC_MSG_TEXT)
+                                    newMsg.text = pdu
+                                    let sentMsgId: () = dcContext.sendMessage(chatId: chatIdInt, message: newMsg)
+                
+                                    logger.info("Privitty App: Message sent with ID: \(sentMsgId)")
+                                } else {
+                                    logger.debug("Privitty App: No valid 'data.data.pdu' in response")
                                 }
+                            } else {
+                                logger.debug("Privitty App: Not a Privitty message")
                             }
                         } catch {
-                            logger.debug("Privitty: Exception in Privitty message: \(error.localizedDescription)")
+                            logger.error("Privitty App: Exception in Privitty message processing: \(error.localizedDescription)")
                         }
                     }
                 }
@@ -691,7 +704,6 @@ class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationCenterD
             eventHandlerActive = false
         }
     }
-
 
     private func uninstallEventHandler() {
         shouldShutdownEventLoop = true

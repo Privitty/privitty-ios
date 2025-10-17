@@ -1172,25 +1172,93 @@ class ChatViewController: UITableViewController, UITableViewDropDelegate {
     }
 
     private func clipperButtonMenu() -> UIMenu {
-        // TODO: Need to handle here one condition after api is ready from backend side its called only one time
+  
         if let appDelegate = UIApplication.shared.delegate as? AppDelegate,
            let privittyCore = appDelegate.privittyCore {
 
-            if let response = privittyCore.createPeerAddRequest(
-                withChatId: String(dcChat.id), // String(chatId),
-                peerName: dcChat.name, // dcContext.displayname,
-                peerEmail: "test@test.com",
-                peerId: "@test"
-            ), !response.isEmpty {
-                NSLog("Peer Add Request created: \(response)")
+            let chatIdString = String(dcChat.id)
+            let message = dcContext.getMessage(id: dcChat.id)
+
+            // Check if the chat is privity protected
+            if !privittyCore.isChatProtected(chatIdString) {
+                logger.info("Chat is protected and ready for secure operations")
+
+                // Call the method that returns a dictionary with more detailed response
+                let result = privittyCore.createPeerAddRequest(
+                    withChatId: chatIdString,
+                    peerName: dcChat.name,
+                    peerEmail: "",
+                    peerId: String(message.fromContactId)
+                )
+
+                logger.info("Peer add request response: \(result ?? [:])")
+
+                if let successDict = result?["success"] as? [String: Any],
+                   let success = successDict["value"] as? Bool,
+                   success {
+
+                    logger.info("Peer add request created successfully")
+
+                    // Pretty-print full result dictionary
+                    if let result = result {
+                        do {
+                            let jsonData = try JSONSerialization.data(withJSONObject: result, options: .prettyPrinted)
+                            if let jsonString = String(data: jsonData, encoding: .utf8) {
+                                print("Full Result:\n\(jsonString)")
+                                logger.info("Full Peer Add Result:\n\(jsonString)")
+                            }
+                        } catch {
+                            logger.error("Failed to serialize result to JSON: \(error.localizedDescription)")
+                        }
+                    }
+
+                    if let data = result?["data"] as? [String: Any],
+                       let pduDict = data["pdu"] as? [String: Any],
+                       let pdu = pduDict["value"] as? String, !pdu.isEmpty {
+
+                        logger.info("PDU: \(pdu)")
+                        logger.info("PDU length: \(pdu.count) characters")
+
+                        let messageToSend: DcMsg = self.dcContext.newMessage(viewType: DC_MSG_TEXT)
+                        messageToSend.text = pdu
+
+                        self.dcContext.sendMessage(chatId: self.chatId, message: messageToSend)
+                        logger.info("Peer add request sent for chatId: \(self.chatId), message: \(messageToSend)")
+
+                    } else {
+                        logger.info(" PDU not found or empty in response data")
+                    }
+
+                } else {
+                    //  Error block: success was false or couldn't be parsed
+                    if let error = result?["error"] as? String {
+                        logger.error("Error creating peer add request: \(error)")
+                    } else {
+                        logger.error("Unknown error creating peer add request")
+                    }
+
+                    // Also print the full result for debugging
+                    if let result = result {
+                        do {
+                            let jsonData = try JSONSerialization.data(withJSONObject: result, options: .prettyPrinted)
+                            if let jsonString = String(data: jsonData, encoding: .utf8) {
+                                print("Failure Result:\n\(jsonString)")
+                                logger.info("Failure Peer Add Result:\n\(jsonString)")
+                            }
+                        } catch {
+                            logger.error("Failed to serialize failure result to JSON: \(error.localizedDescription)")
+                        }
+                    }
+                }
+
             } else {
-                NSLog("Failed to create Peer Add Request")
+                logger.info("Chat is not privity protected. Cannot proceed with Peer Add Request.")
             }
-            
+
         } else {
-            NSLog("Failed to get AppDelegate or privittyCore")
+            logger.info("Failed to get AppDelegate or privittyCore")
         }
-  
+        
         var actions = [UIMenuElement]()
         func action(_ localized: String, _ systemImage: String, attributes: UIMenuElement.Attributes = [], _ handler: @escaping () -> Void) -> UIAction {
             UIAction(title: String.localized(localized), image: UIImage(systemName: systemImage), attributes: attributes, handler: { _ in handler() })
@@ -1531,6 +1599,7 @@ class ChatViewController: UITableViewController, UITableViewDropDelegate {
             guard let self else { return }
             let message = self.dcContext.newMessage(viewType: DC_MSG_TEXT)
             message.text = text
+            print("typed msg", message)
             if let quoteMessage {
                 message.quoteMessage = quoteMessage
             }

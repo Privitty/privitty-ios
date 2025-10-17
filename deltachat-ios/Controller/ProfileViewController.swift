@@ -623,6 +623,24 @@ class ProfileViewController: UITableViewController {
         alert.addAction(UIAlertAction(title: String.localized("menu_delete_chat"), style: .destructive, handler: { [weak self] _ in
             guard let self else { return }
             dcContext.deleteChat(chatId: chatId)
+            if let appDelegate = UIApplication.shared.delegate as? AppDelegate,
+               let privittyCore = appDelegate.privittyCore {
+                let result = privittyCore.deleteChatRoom(withChatId: String(chatId))
+
+                do {
+                    guard let resultDict = result as? [String: Any] else {
+                        throw NSError(domain: "DeleteChatRoom", code: 1001, userInfo: [NSLocalizedDescriptionKey: "Unexpected result format from deleteChatRoom"])
+                    }
+
+                    logger.info("Raw deleteChatRoom result: \(resultDict)")
+                    logger.info("Chat room deleted successfully")
+
+                } catch {
+                    logger.error("Error processing deleteChatRoom response: \(error.localizedDescription)")
+                }
+            }
+
+
             NotificationManager.removeNotificationsForChat(dcContext: dcContext, chatId: chatId)
             if #available(iOS 17.0, *) {
                 UserDefaults.shared?.removeChatFromHomescreenWidget(accountId: dcContext.id, chatId: chatId)
