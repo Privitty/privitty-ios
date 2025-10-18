@@ -47,4 +47,10 @@ public struct DcColors {
     public static let reactionBackground = UIColor.themeColor(light: UIColor(named: "Colors/ReactionBackground")!)
     public static let reactionLabel = UIColor.themeColor(light: UIColor(named: "Colors/ReactionLabel")!)
     public static let reactionBorder = UIColor(named: "Colors/ReactionBorder")!
+    public static let privittyThemeColor = UIColor.init(hexString: "7F66C5")
+    public static let privittyButtonsBackgroundColor = UIColor.init(hexString: "6750A4")
+    public static let privittyButtonsTextBlackColor = UIColor.init(hexString: "020202")
+    public static let privittyCameraBackgroundColor = UIColor.init(hexString: "E7E7E7")
+    
+    
 }

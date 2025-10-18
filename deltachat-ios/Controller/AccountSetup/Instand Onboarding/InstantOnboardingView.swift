@@ -1,4 +1,5 @@
 import UIKit
+import DcCore
 
 class InstantOnboardingView: UIView {
 
@@ -23,12 +24,19 @@ class InstantOnboardingView: UIView {
             imageButton.setImage(avatarImage, for: .normal)
         } else {
             imageButton.setImage(UIImage(named: "camera"), for: .normal)
+//            if let image = UIImage(named: "privitty_camera_icon")?.withRenderingMode(.alwaysTemplate) {
+//                imageButton.setImage(image, for: .normal)
+//                imageButton.tintColor = UIColor.red
+//            }
         }
-        imageButton.backgroundColor = .lightGray
+        imageButton.backgroundColor =  DcColors.privittyCameraBackgroundColor
         imageButton.layer.masksToBounds = true
         imageButton.layer.cornerRadius = 50
         imageButton.contentVerticalAlignment = .fill
         imageButton.contentHorizontalAlignment = .fill
+        imageButton.layer.borderWidth = 2
+        imageButton.layer.borderColor = DcColors.privittyThemeColor.cgColor
+
 
         nameTextField = UITextField()
         nameTextField.text = name
@@ -142,7 +150,7 @@ class InstantOnboardingView: UIView {
         agreeButton.isEnabled = buttonShouldBeEnabled
 
         if buttonShouldBeEnabled {
-            agreeButton.backgroundColor = .systemBlue
+            agreeButton.backgroundColor = DcColors.privittyThemeColor
             otherOptionsButton.setTitleColor(.systemBlue, for: .normal)
         } else {
             agreeButton.backgroundColor = UIColor.systemGray.withAlphaComponent(0.3)

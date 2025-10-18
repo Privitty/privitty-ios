@@ -39,7 +39,9 @@ class AppCoordinator: NSObject {
         let nav = UINavigationController(rootViewController: root)
         let qrCodeTabImage: UIImage?
         qrCodeTabImage = UIImage(systemName: "qrcode")
+       // qrCodeTabImage = UIImage(named: "ic_done_36pt") // change tab bar imgaes changes here
         nav.tabBarItem = UITabBarItem(title: String.localized("qr_code"), image: qrCodeTabImage, tag: qrTab)
+        // htt
         return nav
     }
 

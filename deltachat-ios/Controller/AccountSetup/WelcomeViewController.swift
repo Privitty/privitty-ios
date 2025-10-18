@@ -32,6 +32,7 @@ class WelcomeViewController: UIViewController {
             present(alert, animated: true, completion: nil)
         }
         view.translatesAutoresizingMaskIntoConstraints = false
+        view.backgroundColor = DcColors.privittyThemeColor
         return view
     }()
 
@@ -72,6 +73,7 @@ class WelcomeViewController: UIViewController {
     // MARK: - lifecycle
     override func viewDidLoad() {
         super.viewDidLoad()
+        view.backgroundColor =  DcColors.privittyThemeColor
         setupSubviews()
         if canCancel {
             navigationItem.leftBarButtonItem = cancelButton
@@ -336,7 +338,7 @@ class WelcomeContentView: UIView {
     }()
 
     private var container = UIView()
-    private var logoView = UIImageView(image: UIImage(named: "dc_logo"))
+    private var logoView = UIImageView(image: UIImage(named: "privitty_logo_without_title"))
 
     private lazy var titleLabel: UILabel = {
         let label = UILabel()
@@ -361,7 +363,7 @@ class WelcomeContentView: UIView {
         button.setTitle(title, for: .normal)
         button.titleLabel?.font = UIFont.preferredFont(forTextStyle: .body)
         button.setTitleColor(.white, for: .normal)
-        button.backgroundColor = .systemBlue
+        button.backgroundColor = DcColors.privittyButtonsBackgroundColor
         button.contentEdgeInsets = UIEdgeInsets(top: 8, left: 15, bottom: 8, right: 15)
         button.layer.cornerRadius = 5
         button.clipsToBounds = true
@@ -372,7 +374,7 @@ class WelcomeContentView: UIView {
     private lazy var logInButton: UIButton = {
         let button = UIButton()
         let title = String.localized("onboarding_alternative_logins")
-        button.setTitleColor(UIColor.systemBlue, for: .normal)
+        button.setTitleColor(DcColors.privittyButtonsTextBlackColor, for: .normal)
         button.setTitle(title, for: .normal)
         button.titleLabel?.font = UIFont.preferredFont(forTextStyle: .body)
         button.addTarget(self, action: #selector(logInButtonPressed(_:)), for: .touchUpInside)
