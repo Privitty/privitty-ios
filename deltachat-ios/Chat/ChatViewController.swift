@@ -1172,6 +1172,34 @@ class ChatViewController: UITableViewController, UITableViewDropDelegate {
     }
 
     private func clipperButtonMenu() -> UIMenu {
+
+        // Create peer add request if chat is not protected
+        if !PrvContext.shared.isChatProtected(chatId: String(chatId)) {
+            let chat = dcContext.getChat(chatId: chatId)
+            let message = dcContext.getMessage(id: dcChat.id)
+            let result = PrvContext.shared.createPeerAddRequest(
+                chatId: String(chatId),
+                peerName: chat.name,
+                peerEmail: "milind@example.com",
+                peerId: String(message.fromContactId)
+            )
+
+            if result.success {
+                logger.info("Peer add request created successfully for chat \(chatId)")
+                if let pdu = result.pdu {
+
+                    // Send the PDU message to the chat
+                    let messageToSend: DcMsg = self.dcContext.newMessage(viewType: DC_MSG_TEXT)
+                    messageToSend.text = pdu
+
+                    self.dcContext.sendMessage(chatId: self.chatId, message: messageToSend)
+                    logger.info("Peer add request sent for chatId: \(self.chatId)")
+                }
+            } else {
+                logger.error("Failed to create peer add request: \(result.error ?? "Unknown error")")
+            }
+        }
+
         var actions = [UIMenuElement]()
         func action(_ localized: String, _ systemImage: String, attributes: UIMenuElement.Attributes = [], _ handler: @escaping () -> Void) -> UIAction {
             UIAction(title: String.localized(localized), image: UIImage(systemName: systemImage), attributes: attributes, handler: { _ in handler() })

@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		21D54500299415B9008B54D5 /* Character+Extentions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 21D544FF299415B9008B54D5 /* Character+Extentions.swift */; };
 		21D6C941260623F500D0755A /* NotificationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 21D6C9392606190600D0755A /* NotificationManager.swift */; };
+		2F11E3E62E9FABD900CA4BB4 /* PrvContext.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F11E3E52E9FABD900CA4BB4 /* PrvContext.swift */; };
 		2F437DF82E94F68900297EED /* Privitty.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 2F437DF72E94F68900297EED /* Privitty.framework */; };
 		3008CB7224F93EB900E6A617 /* AudioMessageCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3008CB7124F93EB900E6A617 /* AudioMessageCell.swift */; };
 		3008CB7424F9436C00E6A617 /* AudioPlayerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3008CB7324F9436C00E6A617 /* AudioPlayerView.swift */; };
@@ -313,6 +314,7 @@
 		0EEC8C8D7C6F411BA7A449DE /* Pods-deltachat-ios.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-deltachat-ios.debug.xcconfig"; path = "Target Support Files/Pods-deltachat-ios/Pods-deltachat-ios.debug.xcconfig"; sourceTree = "<group>"; };
 		21D544FF299415B9008B54D5 /* Character+Extentions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Character+Extentions.swift"; sourceTree = "<group>"; };
 		21D6C9392606190600D0755A /* NotificationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationManager.swift; sourceTree = "<group>"; };
+		2F11E3E52E9FABD900CA4BB4 /* PrvContext.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrvContext.swift; sourceTree = "<group>"; };
 		2F437DF72E94F68900297EED /* Privitty.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = Privitty.framework; sourceTree = "<group>"; };
 		3008CB7124F93EB900E6A617 /* AudioMessageCell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioMessageCell.swift; sourceTree = "<group>"; };
 		3008CB7324F9436C00E6A617 /* AudioPlayerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioPlayerView.swift; sourceTree = "<group>"; };
@@ -743,6 +745,7 @@
 		304219D7244072E600516852 /* DC */ = {
 			isa = PBXGroup;
 			children = (
+				2F11E3E52E9FABD900CA4BB4 /* PrvContext.swift */,
 				304219D82440734A00516852 /* DcMsg+Extension.swift */,
 			);
 			path = DC;
@@ -1332,8 +1335,6 @@
 				643B44782E0C2BD900AEE026 /* DcTests */,
 			);
 			name = DcTests;
-			packageProductDependencies = (
-			);
 			productName = DcTests;
 			productReference = 643B44772E0C2BD800AEE026 /* DcTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
@@ -1601,13 +1602,9 @@
 			inputFileListPaths = (
 				"${PODS_ROOT}/Target Support Files/Pods-deltachat-ios/Pods-deltachat-ios-frameworks-${CONFIGURATION}-input-files.xcfilelist",
 			);
-			inputPaths = (
-			);
 			name = "[CP] Embed Pods Frameworks";
 			outputFileListPaths = (
 				"${PODS_ROOT}/Target Support Files/Pods-deltachat-ios/Pods-deltachat-ios-frameworks-${CONFIGURATION}-output-files.xcfilelist",
-			);
-			outputPaths = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
@@ -1820,6 +1817,7 @@
 				30E348E124F53772005C93D1 /* ImageTextCell.swift in Sources */,
 				D8FB04002B4F0CF100A355F8 /* EmojiView.swift in Sources */,
 				3008CB7624F95B6D00E6A617 /* AudioController.swift in Sources */,
+				2F11E3E62E9FABD900CA4BB4 /* PrvContext.swift in Sources */,
 				3080A035277DE30100E74565 /* String+Extensions.swift in Sources */,
 				5F153E9A2CC38BAA00871ABE /* GiveBackMyFirstResponder.swift in Sources */,
 				302B84CE2397F6CD001C261F /* URL+Extension.swift in Sources */,
