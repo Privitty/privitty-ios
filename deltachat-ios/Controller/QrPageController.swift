@@ -82,7 +82,8 @@ class QrPageController: UIPageViewController {
 
     private func updateMenuItems() {
         let menu = moreButtonMenu()
-        let button =  UIBarButtonItem(image: UIImage(systemName: "ellipsis.circle"), menu: menu)
+        let button =  UIBarButtonItem(image: UIImage(named: "more_option_icon"), menu: menu)
+        button.tintColor = DcColors.privittyButtonsTextBlackColor
         navigationItem.rightBarButtonItem = button
     }
 
@@ -96,7 +97,7 @@ class QrPageController: UIPageViewController {
                 self?.copyToClipboard()
             })
         }
-        actions.append(UIAction(title: String.localized("paste_from_clipboard"), image: UIImage(systemName: "doc.on.clipboard")) { [weak self] _ in
+        actions.append(UIAction(title: String.localized("paste_from_clipboard"), image: UIImage(named: "paste_from_clipboard_icon")) { [weak self] _ in
             self?.pasteFromClipboard()
         })
         if dcContext.isChatmail == false {
@@ -106,10 +107,18 @@ class QrPageController: UIPageViewController {
             })
         }
         if qrSegmentControl.selectedSegmentIndex == 0 {
-            actions.append(UIAction(title: String.localized("withdraw_qr_code"), image: UIImage(systemName: "trash"), attributes: [.destructive]) { [weak self] _ in
+            let image = UIImage(named: "reset_qr_icon")?.withRenderingMode(.alwaysTemplate)
+            let action = UIAction(
+                title: String.localized("withdraw_qr_code"),
+                image: image,
+                attributes: [.destructive]
+            ) { [weak self] _ in
                 self?.withdrawQrCode()
-            })
+            }
+
+            actions.append(action)
         }
+
         return UIMenu(children: actions)
     }
 

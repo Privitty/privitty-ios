@@ -1,17 +1,17 @@
 {
   "images" : [
     {
-      "filename" : "privitty_camera.png",
+      "filename" : "paste_from_clipboard_icon@1x.png",
       "idiom" : "universal",
       "scale" : "1x"
     },
     {
-      "filename" : "privitty_camera@2x.png",
+      "filename" : "paste_from_clipboard_icon@12x.png",
       "idiom" : "universal",
       "scale" : "2x"
     },
     {
-      "filename" : "privitty_camera@3x.png",
+      "filename" : "paste_from_clipboard_icon@3x.png",
       "idiom" : "universal",
       "scale" : "3x"
     }

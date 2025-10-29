@@ -84,21 +84,67 @@ class DocumentGalleryFileCell: UITableViewCell {
             updateFileMsg(msg: msg)
         }
     }
+    
+    private func configureMessageIcon(imageName: String, titleText: String, subtitleText: String) {
+        contentView.subviews.forEach { if $0.tag == 999 { $0.removeFromSuperview() } }
+
+        let iconBackgroundView = UIView()
+        iconBackgroundView.translatesAutoresizingMaskIntoConstraints = false
+        iconBackgroundView.backgroundColor = DcColors.privittyButtonsBackgroundColor
+        iconBackgroundView.layer.cornerRadius = 22.5
+        iconBackgroundView.layer.masksToBounds = true
+        iconBackgroundView.tag = 999
+        contentView.addSubview(iconBackgroundView)
+
+        let iconImageView = UIImageView()
+        iconImageView.translatesAutoresizingMaskIntoConstraints = false
+        iconImageView.contentMode = .scaleAspectFit
+        iconImageView.tintColor = DcColors.whiteBackground
+        iconImageView.image = UIImage(named: imageName)?.withRenderingMode(.alwaysTemplate)
+        iconBackgroundView.addSubview(iconImageView)
+
+        NSLayoutConstraint.activate([
+            iconBackgroundView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
+            iconBackgroundView.centerYAnchor.constraint(equalTo: contentView.centerYAnchor),
+            iconBackgroundView.widthAnchor.constraint(equalToConstant: 45),
+            iconBackgroundView.heightAnchor.constraint(equalToConstant: 45),
+
+            iconImageView.centerXAnchor.constraint(equalTo: iconBackgroundView.centerXAnchor),
+            iconImageView.centerYAnchor.constraint(equalTo: iconBackgroundView.centerYAnchor),
+            iconImageView.widthAnchor.constraint(equalToConstant: 20),
+            iconImageView.heightAnchor.constraint(equalToConstant: 20)
+        ])
+
+        title.translatesAutoresizingMaskIntoConstraints = false
+        subtitle.translatesAutoresizingMaskIntoConstraints = false
+        title.text = titleText
+        subtitle.text = subtitleText
+
+        NSLayoutConstraint.activate([
+            title.leadingAnchor.constraint(equalTo: iconBackgroundView.trailingAnchor, constant: 12),
+            title.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 10),
+            title.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16),
+
+            subtitle.leadingAnchor.constraint(equalTo: title.leadingAnchor),
+            subtitle.topAnchor.constraint(equalTo: title.bottomAnchor, constant: 4),
+            subtitle.trailingAnchor.constraint(equalTo: title.trailingAnchor)
+        ])
+    }
 
     private func updateFileMsg(msg: DcMsg) {
-        if let fileUrl = msg.fileURL {
-            generateThumbnailFor(url: fileUrl, placeholder: UIImage(named: "ic_attach_file_36pt")?.maskWithColor(color: DcColors.grayTextColor))
-        }
-        title.text = msg.filename
-        subtitle.text = msg.getPrettyFileSize()
+        configureMessageIcon(
+            imageName: "files_icon",
+            titleText: msg.filename ?? "",
+            subtitleText: msg.getPrettyFileSize()
+        )
     }
 
     private func updateVoiceMsg(msg: DcMsg, dcContext: DcContext) {
-        if let fileUrl = msg.fileURL {
-            generateThumbnailFor(url: fileUrl, placeholder: UIImage(named: "ic_attach_file_36pt")?.maskWithColor(color: DcColors.grayTextColor))
-        }
-        title.text = msg.getSenderName(dcContext.getContact(id: msg.fromContactId))
-        subtitle.text = msg.formattedSentDate()
+        configureMessageIcon(
+            imageName: "play_voice_icon",
+            titleText: msg.getSenderName(dcContext.getContact(id: msg.fromContactId)),
+            subtitleText: msg.formattedSentDate()
+        )
     }
 
     private func updateWebxdcMsg(msg: DcMsg) {

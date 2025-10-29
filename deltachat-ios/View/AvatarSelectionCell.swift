@@ -8,13 +8,21 @@ class AvatarSelectionCell: UITableViewCell {
     var onAvatarTapped: (() -> Void)?
 
     lazy var defaultImage: UIImage = {
-        return UIImage(named: "camera") ?? UIImage()
+        return UIImage(named: "privitty_camera_icon") ?? UIImage()
     }()
 
-    lazy var badge: InitialsBadge = {
-        let badge = InitialsBadge(size: badgeSize)
-        badge.setContentCompressionResistancePriority(.defaultHigh, for: .horizontal)
-        return badge
+    private lazy var imageButton: UIButton = {
+        let button = UIButton(type: .custom)
+        button.translatesAutoresizingMaskIntoConstraints = false
+        button.backgroundColor = DcColors.privittyCameraBackgroundColor
+        button.layer.masksToBounds = true
+        button.layer.cornerRadius = badgeSize / 2
+        button.contentVerticalAlignment = .fill
+        button.contentHorizontalAlignment = .fill
+        button.layer.borderWidth = 2
+        button.layer.borderColor = DcColors.privittyThemeColor.cgColor
+        button.addTarget(self, action: #selector(onAvatarButtonTapped), for: .touchUpInside)
+        return button
     }()
 
     lazy var hintLabel: UILabel = {
@@ -29,18 +37,18 @@ class AvatarSelectionCell: UITableViewCell {
     }()
 
     private lazy var container: UIStackView = {
-        let container = UIStackView(arrangedSubviews: [hintLabel, badge])
+        let container = UIStackView(arrangedSubviews: [hintLabel, imageButton])
         container.axis = .horizontal
         container.alignment = .center
-        container.clipsToBounds = true
+        container.spacing = 12
         container.translatesAutoresizingMaskIntoConstraints = false
         return container
     }()
 
     init(image: UIImage?) {
         super.init(style: .default, reuseIdentifier: nil)
-        setAvatar(image: image)
         setupSubviews()
+        setAvatar(image: image)
     }
 
     override init(style: UITableViewCell.CellStyle, reuseIdentifier: String?) {
@@ -59,33 +67,35 @@ class AvatarSelectionCell: UITableViewCell {
         container.alignLeadingToAnchor(contentView.layoutMarginsGuide.leadingAnchor)
         container.alignTrailingToAnchor(contentView.layoutMarginsGuide.trailingAnchor)
 
-        let touchListener = UILongPressGestureRecognizer(target: self, action: #selector(onBadgeTouched))
-        touchListener.minimumPressDuration = 0
-        badge.addGestureRecognizer(touchListener)
+        NSLayoutConstraint.activate([
+            imageButton.widthAnchor.constraint(equalToConstant: badgeSize),
+            imageButton.heightAnchor.constraint(equalToConstant: badgeSize)
+        ])
+
         selectionStyle = .none
     }
 
-    @objc func onBadgeTouched(gesture: UILongPressGestureRecognizer) {
-        switch gesture.state {
-        case .began:
-            badge.alpha = 0.7
-        case .ended:
-            badge.alpha = 1
-            onAvatarTapped?()
-        case .cancelled:
-            badge.alpha = 1
-        default:
-            break
-        }
+    @objc func onAvatarButtonTapped() {
+        onAvatarTapped?()
+    }
+    
+    func getAvatarImage() -> UIImage? {
+        return imageButton.image(for: .normal)
     }
 
     func setAvatar(image: UIImage?) {
-        if let image = image {
-            badge.setImage(image)
+        if let avatarImage = image {
+            imageButton.setImage(avatarImage, for: .normal)
+            imageButton.imageView?.contentMode = .scaleAspectFill
+            imageButton.tintColor = nil
             avatarSet = true
         } else {
-            badge.setImage(defaultImage)
-            badge.setColor(UIColor.lightGray)
+            if let image = UIImage(named: "privitty_camera_icon")?.withRenderingMode(.alwaysTemplate) {
+                imageButton.setImage(image, for: .normal)
+                imageButton.tintColor = DcColors.privittyThemeColor
+                imageButton.imageView?.contentMode = .scaleAspectFit
+                imageButton.imageEdgeInsets = UIEdgeInsets(top: 25, left: 25, bottom: 25, right: 25)
+            }
             avatarSet = false
         }
     }

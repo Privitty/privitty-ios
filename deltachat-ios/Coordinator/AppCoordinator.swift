@@ -30,7 +30,7 @@ class AppCoordinator: NSObject {
         let tabBarController = UITabBarController()
         tabBarController.delegate = self
         tabBarController.viewControllers = [qrNavController, chatsNavController, settingsNavController]
-        tabBarController.tabBar.tintColor = DcColors.primary
+        tabBarController.tabBar.tintColor = DcColors.privittyThemeColor
         return tabBarController
     }()
 
@@ -38,17 +38,16 @@ class AppCoordinator: NSObject {
         let root = QrPageController(dcAccounts: dcAccounts)
         let nav = UINavigationController(rootViewController: root)
         let qrCodeTabImage: UIImage?
-        qrCodeTabImage = UIImage(systemName: "qrcode")
-       // qrCodeTabImage = UIImage(named: "ic_done_36pt") // change tab bar imgaes changes here
+        qrCodeTabImage = UIImage(named: "scan-barcode")
         nav.tabBarItem = UITabBarItem(title: String.localized("qr_code"), image: qrCodeTabImage, tag: qrTab)
-        // htt
         return nav
     }
 
     private func createChatsNavigationController() -> UINavigationController {
         let root = ChatListViewController(dcContext: dcAccounts.getSelected(), dcAccounts: dcAccounts, isArchive: false)
         let nav = UINavigationController(rootViewController: root)
-        let chatTabImage = UIImage(named: "ic_chat")
+       // let chatTabImage = UIImage(named: "ic_chat")
+        let chatTabImage = UIImage(named: "chat_icon")
         nav.tabBarItem = UITabBarItem(title: String.localized("pref_chats"), image: chatTabImage, tag: chatsTab)
         return nav
     }
@@ -57,7 +56,7 @@ class AppCoordinator: NSObject {
         let root = SettingsViewController(dcAccounts: dcAccounts)
         let nav = UINavigationController(rootViewController: root)
         let settingsImage: UIImage?
-        settingsImage = UIImage(systemName: "gear")
+        settingsImage = UIImage(named: "setting_icon")
         nav.tabBarItem = UITabBarItem(title: String.localized("menu_settings"), image: settingsImage, tag: settingsTab)
         return nav
     }

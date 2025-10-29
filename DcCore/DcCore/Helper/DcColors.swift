@@ -51,6 +51,9 @@ public struct DcColors {
     public static let privittyButtonsBackgroundColor = UIColor.init(hexString: "6750A4")
     public static let privittyButtonsTextBlackColor = UIColor.init(hexString: "020202")
     public static let privittyCameraBackgroundColor = UIColor.init(hexString: "E7E7E7")
-    
-    
+    public static let emptyTextBorderColor = UIColor.init(hexString: "B0B0B0")
+    public static let iconBackgroundColor = UIColor.init(hexString: "D2D2F3")
+    public static let whiteBackgroundColor = UIColor.init(hexString: "FFFFFF")
+    public static let redIconColor = UIColor.init(hexString: "D93229")
+    public static let whiteBackground = #colorLiteral(red: 1, green: 1, blue: 1, alpha: 1)
 }

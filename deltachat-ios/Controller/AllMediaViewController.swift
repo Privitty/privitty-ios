@@ -31,10 +31,33 @@ class AllMediaViewController: UIPageViewController {
             headerTitle: String.localized("audio"),
             type1: DC_MSG_AUDIO, type2: DC_MSG_VOICE, type3: 0
         )]
-
+    
     private lazy var segmentControl: UISegmentedControl = {
-        let control = UISegmentedControl(items: pages.map({$0.headerTitle}))
-        control.tintColor = DcColors.primary
+        let control = UISegmentedControl(items: pages.map({ $0.headerTitle }))
+
+        // Background color for the entire control
+       // control.backgroundColor = DcColors.whiteBackgroundColor
+
+        // Color for the selected segment
+        control.selectedSegmentTintColor = DcColors.privittyThemeColor
+
+        // Text color for normal (unselected) segments
+        let normalTextAttributes: [NSAttributedString.Key: Any] = [
+            .foregroundColor: DcColors.privittyButtonsTextBlackColor,
+            .font: UIFont.systemFont(ofSize: 14, weight: .medium)
+        ]
+        control.setTitleTextAttributes(normalTextAttributes, for: .normal)
+
+        // Text color for selected segment
+        let selectedTextAttributes: [NSAttributedString.Key: Any] = [
+            .foregroundColor: DcColors.whiteBackgroundColor,
+            .font: UIFont.systemFont(ofSize: 14, weight: .medium)
+        ]
+        control.setTitleTextAttributes(selectedTextAttributes, for: .selected)
+
+        control.layer.cornerRadius = 8
+        control.clipsToBounds = true
+
         control.addTarget(self, action: #selector(segmentControlChanged), for: .valueChanged)
         control.selectedSegmentIndex = 0
         return control
@@ -56,6 +79,19 @@ class AllMediaViewController: UIPageViewController {
     }
 
     // MARK: - lifecycle
+//    override func viewDidLoad() {
+//        super.viewDidLoad()
+//        dataSource = self
+//        delegate = self
+//        navigationItem.titleView = segmentControl
+//        navigationItem.rightBarButtonItem = UserDefaults.standard.bool(forKey: "location_streaming") ? mapButton : nil
+//        navigationController?.navigationBar.scrollEdgeAppearance = navigationController?.navigationBar.standardAppearance
+//
+//        let page = pages[prevIndex]
+//        setViewControllers([makeViewController(page)], direction: .forward, animated: false, completion: nil)
+//        segmentControl.selectedSegmentIndex = prevIndex
+//    }
+    
     override func viewDidLoad() {
         super.viewDidLoad()
         dataSource = self
@@ -64,9 +100,24 @@ class AllMediaViewController: UIPageViewController {
         navigationItem.rightBarButtonItem = UserDefaults.standard.bool(forKey: "location_streaming") ? mapButton : nil
         navigationController?.navigationBar.scrollEdgeAppearance = navigationController?.navigationBar.standardAppearance
 
+        let backButton = UIButton(type: .system)
+        backButton.setImage(UIImage(named: "back_button_icon")?.withRenderingMode(.alwaysOriginal), for: .normal)
+        backButton.setTitle(" ", for: .normal)
+        backButton.titleLabel?.font = UIFont.systemFont(ofSize: 17, weight: .medium)
+        backButton.addTarget(self, action: #selector(backTapped), for: .touchUpInside)
+        backButton.imageEdgeInsets = UIEdgeInsets(top: 0, left: -5, bottom: 0, right: 0)
+
+        let barButton = UIBarButtonItem(customView: backButton)
+        navigationItem.leftBarButtonItem = barButton
+        navigationItem.hidesBackButton = true
+
         let page = pages[prevIndex]
         setViewControllers([makeViewController(page)], direction: .forward, animated: false, completion: nil)
         segmentControl.selectedSegmentIndex = prevIndex
+    }
+
+    @objc private func backTapped() {
+        navigationController?.popViewController(animated: true)
     }
 
     // MARK: - actions

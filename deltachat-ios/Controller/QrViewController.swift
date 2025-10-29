@@ -60,7 +60,7 @@ class QrViewController: UIViewController {
         title = String.localized("qrshow_title")
         navigationItem.rightBarButtonItem = moreButton
         shareLinkButton.addTarget(self, action: #selector(QrViewController.shareInviteLink(_:)), for: .touchUpInside)
-        shareLinkButton.setTitleColor(DcColors.primary, for: .normal)
+        shareLinkButton.setTitleColor(DcColors.privittyThemeColor, for: .normal)
 
         let svg = dcContext.getSecurejoinQrSVG(chatId: chatId)
         qrContentView.image = getQrImage(svg: svg)
