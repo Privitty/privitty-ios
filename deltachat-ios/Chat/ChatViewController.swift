@@ -855,7 +855,8 @@ class ChatViewController: UITableViewController, UITableViewDropDelegate {
             
             var rightBarButtonItems = [UIBarButtonItem]()
 
-            let button = UIBarButtonItem(image: UIImage(systemName: "square.grid.2x2"), style: .plain, target: self, action: #selector(appsAndMediaPressed))
+            let button = UIBarButtonItem(image: UIImage(named: "gallery_icon"), style: .plain, target: self, action: #selector(appsAndMediaPressed))
+            button.tintColor = DcColors.defaultInverseColor
             button.accessibilityLabel = String.localized("apps_and_media")
             rightBarButtonItems.append(button)
 
@@ -1068,8 +1069,8 @@ class ChatViewController: UITableViewController, UITableViewDropDelegate {
         messageInputBar.inputTextView.placeholder = String.localized("chat_input_placeholder")
         messageInputBar.inputTextView.accessibilityLabel = String.localized("write_message_desktop")
         messageInputBar.separatorLine.backgroundColor = DcColors.colorDisabled
-        messageInputBar.inputTextView.textColor = DcColors.defaultTextColor
-        messageInputBar.inputTextView.backgroundColor = DcColors.inputFieldColor
+        messageInputBar.inputTextView.textColor = DcColors.privittyButtonsTextBlackColor
+        messageInputBar.inputTextView.backgroundColor = DcColors.whiteBackgroundColor
         messageInputBar.inputTextView.placeholderTextColor = DcColors.placeholderColor
         messageInputBar.inputTextView.textContainerInset = UIEdgeInsets(top: 8, left: 16, bottom: 8, right: 38)
         messageInputBar.inputTextView.placeholderLabelInsets = UIEdgeInsets(top: 8, left: 20, bottom: 8, right: 38)
@@ -1096,15 +1097,18 @@ class ChatViewController: UITableViewController, UITableViewDropDelegate {
         messageInputBar.setLeftStackViewWidthConstant(to: 40, animated: false)
         messageInputBar.setRightStackViewWidthConstant(to: 40, animated: false)
 
-        let sendButtonImage = UIImage(named: "paper_plane")?.withRenderingMode(.alwaysTemplate)
+        let sendButtonImage = UIImage(named: "sent_msg_icon")?.withRenderingMode(.alwaysTemplate)
         messageInputBar.sendButton.image = sendButtonImage
+        messageInputBar.sendButton.tintColor = DcColors.defaultInverseColor
+        messageInputBar.sendButton.backgroundColor = .clear
+        messageInputBar.sendButton.title = nil
         messageInputBar.sendButton.accessibilityLabel = String.localized("menu_send")
         messageInputBar.sendButton.accessibilityTraits = .button
-        messageInputBar.sendButton.title = nil
-        messageInputBar.sendButton.tintColor = UIColor(white: 1, alpha: 1)
-        messageInputBar.sendButton.layer.cornerRadius = 20
+        messageInputBar.sendButton.layer.cornerRadius = 0
+        messageInputBar.sendButton.layer.masksToBounds = false
+        messageInputBar.sendButton.layer.borderWidth = 0
+        messageInputBar.sendButton.layer.backgroundColor = UIColor.clear.cgColor
         messageInputBar.middleContentViewPadding = UIEdgeInsets(top: 0, left: 0, bottom: 0, right: 10)
-        // this adds a padding between textinputfield and send button
         messageInputBar.sendButton.contentEdgeInsets = UIEdgeInsets(top: 5, left: 5, bottom: 5, right: 5)
         messageInputBar.sendButton.setSize(CGSize(width: 40, height: 40), animated: false)
         messageInputBar.padding = UIEdgeInsets(top: 6, left: 6, bottom: 6, right: 12)
@@ -1113,16 +1117,16 @@ class ChatViewController: UITableViewController, UITableViewDropDelegate {
         let attachButton = InputBarButtonItem()
             .configure {
                 $0.spacing = .fixed(0)
-                let clipperIcon = UIImage(named: "ic_attach_file_36pt")?.withRenderingMode(.alwaysTemplate)
+                let clipperIcon = UIImage(named: "attachement_icon")?.withRenderingMode(.alwaysTemplate)
                 $0.image = clipperIcon
-                $0.tintColor = DcColors.primary
+                $0.tintColor = DcColors.defaultInverseColor
                 $0.setSize(CGSize(width: 40, height: 40), animated: false)
                 $0.accessibilityLabel = String.localized("menu_add_attachment")
                 $0.accessibilityTraits = .button
             }.onSelected {
-                $0.tintColor = UIColor.themeColor(light: .lightGray, dark: .darkGray)
+                $0.tintColor = DcColors.defaultInverseColor
             }.onDeselected {
-                $0.tintColor = DcColors.primary
+                $0.tintColor = DcColors.defaultInverseColor
             }
         attachButton.showsMenuAsPrimaryAction = true
         attachButton.menu = UIMenu() // otherwise .menuActionTriggered is not triggered
@@ -1138,11 +1142,11 @@ class ChatViewController: UITableViewController, UITableViewDropDelegate {
         messageInputBar.sendButton
             .onEnabled { item in
                 UIView.animate(withDuration: 0.3, animations: {
-                    item.backgroundColor = DcColors.primary
+                    item.backgroundColor = UIColor.clear
                 })}
             .onDisabled { item in
                 UIView.animate(withDuration: 0.3, animations: {
-                    item.backgroundColor = DcColors.colorDisabled
+                    item.backgroundColor = UIColor.clear
                 })}
     }
 
@@ -1930,7 +1934,9 @@ extension ChatViewController {
                         children.append(UIMenu(title: String.localized("react"), image: UIImage(systemName: "face.smiling"), children: items))
                     }
                     children.append(
-                        UIAction.menuAction(localizationKey: "notify_reply_button", systemImageName: "arrowshape.turn.up.left", with: messageId, action: reply)
+                        UIAction.menuAction(localizationKey: "notify_reply_button", image: UIImage(named: "reply_icon")?.withRenderingMode(.alwaysTemplate)
+                                            , with: messageId,
+                                            action: reply)
                     )
                 }
 
@@ -1941,12 +1947,21 @@ extension ChatViewController {
                 }
 
                 children.append(
-                    UIAction.menuAction(localizationKey: "forward", systemImageName: "arrowshape.turn.up.forward", with: messageId, action: forward)
+                    UIAction.menuAction(localizationKey: "forward", image: UIImage(named: "forward_icon")?.withRenderingMode(.alwaysTemplate), with: messageId, action: forward)
                 )
 
-                if message.isFromCurrentSender && message.hasText && !message.hasHtml && !message.isMarkerOrInfo && dcChat.canSend {
+                if message.isFromCurrentSender &&
+                    message.hasText &&
+                    !message.hasHtml &&
+                    !message.isMarkerOrInfo &&
+                    dcChat.canSend {
                     children.append(
-                        UIAction.menuAction(localizationKey: "global_menu_edit_desktop", systemImageName: "pencil", with: messageId, action: editSentMessage)
+                        UIAction.menuAction(
+                            localizationKey: "global_menu_edit_desktop",
+                            image: UIImage(named: "edit_icon")?.withRenderingMode(.alwaysTemplate),
+                            with: messageId,
+                            action: editSentMessage
+                        )
                     )
                 }
 
@@ -1985,7 +2000,13 @@ extension ChatViewController {
                 }
 
                 children.append(
-                    UIAction.menuAction(localizationKey: "delete", attributes: [.destructive], systemImageName: "trash", with: messageId, action: deleteSingle)
+                    UIAction.menuAction(
+                        localizationKey: "delete",
+                        attributes: [.destructive],
+                        image: UIImage(named: "delete_icon")?.withRenderingMode(.alwaysTemplate),
+                        with: messageId,
+                        action: deleteSingle
+                    )
                 )
 
                 if dcChat.canSend && message.isFromCurrentSender {
@@ -1994,8 +2015,8 @@ extension ChatViewController {
 
                 moreOptions.append(UIAction.menuAction(localizationKey: "info", systemImageName: "info.circle", with: messageId, action: info))
 
-                moreOptions.append(UIAction.menuAction(localizationKey: "select", systemImageName: "checkmark.circle", with: indexPath, action: selectMore))
-
+                moreOptions.append(UIAction.menuAction(localizationKey: "select", image: UIImage(named: "select_icon")?.withRenderingMode(.alwaysTemplate), with: indexPath, action: selectMore))
+                
                 children.append(contentsOf: [
                     UIMenu(options: [.displayInline], children: [
                         UIMenu(title: String.localized("menu_more_options"), image: UIImage(systemName: "ellipsis.circle"), children: moreOptions)

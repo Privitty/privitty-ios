@@ -33,10 +33,11 @@ class ChatListViewController: UITableViewController {
     }()
 
     private let archiveCell = ContactCell()
-
+    
     private lazy var newButton: UIBarButtonItem = {
-        let button = UIBarButtonItem(barButtonSystemItem: UIBarButtonItem.SystemItem.compose, target: self, action: #selector(didPressNewChat))
-        button.tintColor = DcColors.primary
+        let image = UIImage(named: "search_icon")?.withRenderingMode(.alwaysTemplate)
+        let button = UIBarButtonItem(image: image, style: .plain, target: self, action: #selector(didPressNewChat))
+        button.tintColor = DcColors.defaultInverseColor
         return button
     }()
 

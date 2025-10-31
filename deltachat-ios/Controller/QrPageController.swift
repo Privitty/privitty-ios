@@ -83,7 +83,7 @@ class QrPageController: UIPageViewController {
     private func updateMenuItems() {
         let menu = moreButtonMenu()
         let button =  UIBarButtonItem(image: UIImage(named: "more_option_icon"), menu: menu)
-        button.tintColor = DcColors.privittyButtonsTextBlackColor
+        button.tintColor = DcColors.defaultInverseColor
         navigationItem.rightBarButtonItem = button
     }
 
@@ -97,9 +97,19 @@ class QrPageController: UIPageViewController {
                 self?.copyToClipboard()
             })
         }
-        actions.append(UIAction(title: String.localized("paste_from_clipboard"), image: UIImage(named: "paste_from_clipboard_icon")) { [weak self] _ in
-            self?.pasteFromClipboard()
-        })
+     
+        if let image = UIImage(named: "paste_from_clipboard_icon")?
+            .withRenderingMode(.alwaysTemplate) {
+            let tintedImage = image.withTintColor(DcColors.defaultInverseColor, renderingMode: .alwaysOriginal)
+            
+            actions.append(UIAction(
+                title: String.localized("paste_from_clipboard"),
+                image: tintedImage
+            ) { [weak self] _ in
+                self?.pasteFromClipboard()
+            })
+        }
+        
         if dcContext.isChatmail == false {
             actions.append(UIAction(title: String.localized("menu_new_classic_contact"), image: UIImage(systemName: "highlighter")) { [weak self] _ in
                 guard let self else { return }

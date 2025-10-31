@@ -193,7 +193,7 @@ class NewChatViewController: UITableViewController {
                 }
 
                 cell.actionTitle = title
-                cell.textLabel?.textColor = DcColors.privittyButtonsTextBlackColor
+                cell.textLabel?.textColor = DcColors.defaultInverseColor
             }
 
             switch newOptions[row] {

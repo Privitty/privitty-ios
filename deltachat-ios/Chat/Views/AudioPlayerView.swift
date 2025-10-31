@@ -1,4 +1,5 @@
 import Foundation
+import DcCore
 import UIKit
 
 open class AudioPlayerView: UIView {
@@ -6,16 +7,21 @@ open class AudioPlayerView: UIView {
     /// The play button view to display on audio messages.
     lazy var playButton: UIButton = {
         let playButton = UIButton(type: .custom)
-        let playImage = UIImage(named: "play")
-        playImage?.isAccessibilityElement = false
-        let pauseImage = UIImage(named: "pause")
-        pauseImage?.isAccessibilityElement = false
-        playButton.setImage(playImage?.withRenderingMode(.alwaysTemplate), for: .normal)
-        playButton.setImage(pauseImage?.withRenderingMode(.alwaysTemplate), for: .selected)
-        playButton.imageView?.contentMode = .scaleAspectFit
-        playButton.contentVerticalAlignment = .fill
-        playButton.contentHorizontalAlignment = .fill
+        
+        let playImage = UIImage(named: "play_voice_icon")?.withRenderingMode(.alwaysTemplate)
+        let pauseImage = UIImage(named: "pause_voice_icon")?.withRenderingMode(.alwaysTemplate)
+        playButton.setImage(playImage, for: .normal)
+        playButton.setImage(pauseImage, for: .selected)
+        playButton.tintColor = DcColors.whiteBackground
+        playButton.backgroundColor = DcColors.privittyButtonsBackgroundColor
+        playButton.layer.cornerRadius = 22.5
+        playButton.layer.masksToBounds = true
         playButton.translatesAutoresizingMaskIntoConstraints = false
+        playButton.widthAnchor.constraint(equalToConstant: 45).isActive = true
+        playButton.heightAnchor.constraint(equalToConstant: 45).isActive = true
+        let iconSize: CGFloat = 20
+        let padding = (45 - iconSize) / 2
+        playButton.imageEdgeInsets = UIEdgeInsets(top: padding, left: padding, bottom: padding, right: padding)
         playButton.isUserInteractionEnabled = true
         playButton.accessibilityLabel = String.localized("menu_play")
         return playButton

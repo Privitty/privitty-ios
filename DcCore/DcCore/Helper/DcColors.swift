@@ -56,4 +56,8 @@ public struct DcColors {
     public static let whiteBackgroundColor = UIColor.init(hexString: "FFFFFF")
     public static let redIconColor = UIColor.init(hexString: "D93229")
     public static let whiteBackground = #colorLiteral(red: 1, green: 1, blue: 1, alpha: 1)
+    public static let privittyMessageSecondaryColor = UIColor.themeColor(light: UIColor.init(hexString: "E7E7E7"), dark: .black)
+    public static let infoMessageColor = UIColor.init(hexString: "6D6D6D")
+    public static let whiteTextColor = UIColor.init(hexString: "F6F6F6")
+    public static let settingScreenBackgroundColor = UIColor.themeColor(light: UIColor.init(hexString: "E7E7E7"), dark: UIColor.init(hexString: "1C1C1E"))
 }

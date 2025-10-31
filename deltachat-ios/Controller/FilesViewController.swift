@@ -24,6 +24,7 @@ class FilesViewController: UIViewController {
 
     private lazy var emptyStateView: EmptyStateLabel = {
         let label = EmptyStateLabel()
+        label.textColor = DcColors.defaultInverseColor
         if chatId == 0 {
             if type1 == DC_MSG_WEBXDC {
                 label.text = String.localized("all_apps_empty_hint")
