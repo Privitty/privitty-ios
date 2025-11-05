@@ -29,7 +29,8 @@ internal final class ChatsAndMediaViewController: UITableViewController {
         let cell = UITableViewCell(style: .default, reuseIdentifier: nil)
         cell.tag = CellTags.blockedContacts.rawValue
         cell.textLabel?.text = String.localized("pref_blocked_contacts")
-        cell.accessoryType = .disclosureIndicator
+        cell.textLabel?.textColor = DcColors.redIconColor
+        cell.setCustomDisclosureIndicator(imageName: "next_screen_indicator_icon", tintColor: DcColors.defaultInverseColor)
         return cell
     }()
 
@@ -47,7 +48,7 @@ internal final class ChatsAndMediaViewController: UITableViewController {
         let cell = UITableViewCell(style: .value1, reuseIdentifier: nil)
         cell.tag = CellTags.autodel.rawValue
         cell.textLabel?.text = String.localized("delete_old_messages")
-        cell.accessoryType = .disclosureIndicator
+        cell.setCustomDisclosureIndicator(imageName: "next_screen_indicator_icon", tintColor: DcColors.defaultInverseColor)
         cell.detailTextLabel?.text = autodelSummary()
         return cell
     }()
@@ -56,7 +57,7 @@ internal final class ChatsAndMediaViewController: UITableViewController {
         let cell = UITableViewCell(style: .value1, reuseIdentifier: nil)
         cell.tag = CellTags.mediaQuality.rawValue
         cell.textLabel?.text = String.localized("pref_outgoing_media_quality")
-        cell.accessoryType = .disclosureIndicator
+        cell.setCustomDisclosureIndicator(imageName: "next_screen_indicator_icon", tintColor: DcColors.defaultInverseColor)
         cell.detailTextLabel?.text = MediaQualityViewController.getValString(val: dcContext.getConfigInt("media_quality"))
         return cell
     }()
@@ -65,7 +66,7 @@ internal final class ChatsAndMediaViewController: UITableViewController {
         let cell = UITableViewCell(style: .value1, reuseIdentifier: nil)
         cell.tag = CellTags.downloadOnDemand.rawValue
         cell.textLabel?.text = String.localized("auto_download_messages")
-        cell.accessoryType = .disclosureIndicator
+        cell.setCustomDisclosureIndicator(imageName: "next_screen_indicator_icon", tintColor: DcColors.defaultInverseColor)
         cell.detailTextLabel?.text = DownloadOnDemandViewController.getValString(val: dcContext.getConfigInt("download_limit"))
         return cell
     }()
@@ -73,7 +74,20 @@ internal final class ChatsAndMediaViewController: UITableViewController {
     private lazy var receiptConfirmationSwitch: UISwitch = {
         let switchControl = UISwitch()
         switchControl.isOn = dcContext.mdnsEnabled
+        
+        switchControl.tintColor = DcColors.switchOffStateColor
+        switchControl.layer.cornerRadius = switchControl.bounds.height / 2
+        switchControl.backgroundColor = DcColors.switchOffStateColor
+        switchControl.clipsToBounds = true
+        
+        switchControl.onTintColor = DcColors.iconBackgroundColor
+        
+        switchControl.thumbTintColor = switchControl.isOn
+            ? DcColors.privittyThemeColor
+            : DcColors.switchOnOffStateColor
+        
         switchControl.addTarget(self, action: #selector(handleReceiptConfirmationToggle(_:)), for: .valueChanged)
+        
         return switchControl
     }()
 
@@ -90,6 +104,8 @@ internal final class ChatsAndMediaViewController: UITableViewController {
         let cell = ActionCell()
         cell.tag = CellTags.exportBackup.rawValue
         cell.actionTitle = String.localized("export_backup_desktop")
+        cell.textLabel?.textColor = DcColors.defaultInverseColor
+        cell.setCustomDisclosureIndicator(imageName: "next_screen_indicator_icon", tintColor: DcColors.defaultInverseColor)
         return cell
     }()
 
@@ -171,6 +187,12 @@ internal final class ChatsAndMediaViewController: UITableViewController {
     override func tableView(_ tableView: UITableView, titleForFooterInSection section: Int) -> String? {
         return sections[section].footerTitle
     }
+    
+    override func tableView(_ tableView: UITableView, willDisplay cell: UITableViewCell, forRowAt indexPath: IndexPath) {
+        let bgColor = DcColors.settingScreenBackgroundColor
+        cell.backgroundColor = bgColor
+        cell.contentView.backgroundColor = bgColor
+    }
 
     // MARK: - actions
 
@@ -202,6 +224,19 @@ internal final class ChatsAndMediaViewController: UITableViewController {
 
     @objc private func handleReceiptConfirmationToggle(_ sender: UISwitch) {
         dcContext.mdnsEnabled = sender.isOn
+        UIView.animate(withDuration: 0.25) {
+            if sender.isOn {
+                sender.thumbTintColor = DcColors.privittyThemeColor
+                sender.onTintColor = DcColors.iconBackgroundColor
+                sender.tintColor = DcColors.iconBackgroundColor
+                sender.backgroundColor = DcColors.iconBackgroundColor
+            } else {
+                sender.thumbTintColor = DcColors.switchOnOffStateColor
+                sender.onTintColor = DcColors.switchOffStateColor
+                sender.tintColor = DcColors.switchOffStateColor
+                sender.backgroundColor = DcColors.switchOffStateColor
+            }
+        }
     }
 
     // MARK: - updates

@@ -92,32 +92,6 @@ class AllMediaViewController: UIPageViewController {
         segmentControl.selectedSegmentIndex = prevIndex
     }
     
-    // add logic here for back buttion as per design need to disscused this with Milind sir
-//    override func viewDidLoad() {
-//        super.viewDidLoad()
-//        dataSource = self
-//        delegate = self
-//        navigationItem.titleView = segmentControl
-//        navigationItem.rightBarButtonItem = UserDefaults.standard.bool(forKey: "location_streaming") ? mapButton : nil
-//        navigationController?.navigationBar.scrollEdgeAppearance = navigationController?.navigationBar.standardAppearance
-//
-//        let backButton = UIButton(type: .system)
-//        backButton.setImage(UIImage(named: "back_button_icon")?.withRenderingMode(.alwaysTemplate), for: .normal)
-//        backButton.tintColor =  DcColors.privittyButtonsBackgroundColor
-//        backButton.setTitle(" ", for: .normal)
-//        backButton.titleLabel?.font = UIFont.systemFont(ofSize: 17, weight: .medium)
-//        backButton.addTarget(self, action: #selector(backTapped), for: .touchUpInside)
-//        backButton.imageEdgeInsets = UIEdgeInsets(top: 0, left: -5, bottom: 0, right: 0)
-//
-//        let barButton = UIBarButtonItem(customView: backButton)
-//        navigationItem.leftBarButtonItem = barButton
-//        navigationItem.hidesBackButton = true
-//
-//        let page = pages[prevIndex]
-//        setViewControllers([makeViewController(page)], direction: .forward, animated: false, completion: nil)
-//        segmentControl.selectedSegmentIndex = prevIndex
-//    }
-
     @objc private func backTapped() {
         navigationController?.popViewController(animated: true)
     }

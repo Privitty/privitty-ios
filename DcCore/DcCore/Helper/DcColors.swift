@@ -60,4 +60,6 @@ public struct DcColors {
     public static let infoMessageColor = UIColor.init(hexString: "6D6D6D")
     public static let whiteTextColor = UIColor.init(hexString: "F6F6F6")
     public static let settingScreenBackgroundColor = UIColor.themeColor(light: UIColor.init(hexString: "E7E7E7"), dark: UIColor.init(hexString: "1C1C1E"))
+    public static let switchOffStateColor = UIColor.init(hexString: "D1D1D1")
+    public static let switchOnOffStateColor = UIColor.themeColor(light: UIColor.init(hexString: "B0B0B0"), dark: .white)
 }

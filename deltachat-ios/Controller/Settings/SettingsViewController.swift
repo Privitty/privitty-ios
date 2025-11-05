@@ -38,11 +38,7 @@ internal final class SettingsViewController: UITableViewController {
         let cellViewModel = ProfileViewModel(context: dcContext)
         cell.updateCell(cellViewModel: cellViewModel)
         cell.tag = CellTags.profile.rawValue
-        let arrowImage = UIImage(named: "next_screen_indicator_icon")?.withRenderingMode(.alwaysTemplate)
-        let arrowImageView = UIImageView(image: arrowImage)
-        arrowImageView.tintColor = DcColors.defaultInverseColor
-        arrowImageView.contentMode = .scaleAspectFit
-        cell.accessoryView = arrowImageView
+        cell.setCustomDisclosureIndicator(imageName: "next_screen_indicator_icon", tintColor: DcColors.defaultInverseColor)
         return cell
     }()
 
@@ -50,11 +46,7 @@ internal final class SettingsViewController: UITableViewController {
         let cell = UITableViewCell(style: .value1, reuseIdentifier: nil)
         cell.tag = CellTags.chatsAndMedia.rawValue
         cell.textLabel?.text = String.localized("pref_chats")
-        let arrowImage = UIImage(named: "next_screen_indicator_icon")?.withRenderingMode(.alwaysTemplate)
-        let arrowImageView = UIImageView(image: arrowImage)
-        arrowImageView.tintColor = DcColors.defaultInverseColor
-        arrowImageView.contentMode = .scaleAspectFit
-        cell.accessoryView = arrowImageView
+        cell.setCustomDisclosureIndicator(imageName: "next_screen_indicator_icon", tintColor: DcColors.defaultInverseColor)
         return cell
     }()
 
@@ -62,11 +54,7 @@ internal final class SettingsViewController: UITableViewController {
         let cell = UITableViewCell(style: .subtitle, reuseIdentifier: nil)
         cell.tag = CellTags.notifications.rawValue
         cell.textLabel?.text = String.localized("pref_notifications")
-        let arrowImage = UIImage(named: "next_screen_indicator_icon")?.withRenderingMode(.alwaysTemplate)
-        let arrowImageView = UIImageView(image: arrowImage)
-        arrowImageView.tintColor = DcColors.defaultInverseColor
-        arrowImageView.contentMode = .scaleAspectFit
-        cell.accessoryView = arrowImageView
+        cell.setCustomDisclosureIndicator(imageName: "next_screen_indicator_icon", tintColor: DcColors.defaultInverseColor)
         return cell
     }()
 
@@ -75,11 +63,7 @@ internal final class SettingsViewController: UITableViewController {
         let cell = UITableViewCell(style: .default, reuseIdentifier: nil)
         cell.tag = CellTags.addAnotherDevice.rawValue
         cell.textLabel?.text = String.localized("multidevice_title")
-        let arrowImage = UIImage(named: "next_screen_indicator_icon")?.withRenderingMode(.alwaysTemplate)
-        let arrowImageView = UIImageView(image: arrowImage)
-        arrowImageView.tintColor = DcColors.defaultInverseColor
-        arrowImageView.contentMode = .scaleAspectFit
-        cell.accessoryView = arrowImageView
+        cell.setCustomDisclosureIndicator(imageName: "next_screen_indicator_icon", tintColor: DcColors.defaultInverseColor)
         return cell
     }()
 
@@ -87,11 +71,7 @@ internal final class SettingsViewController: UITableViewController {
         let cell = UITableViewCell(style: .value1, reuseIdentifier: nil)
         cell.tag = CellTags.advanced.rawValue
         cell.textLabel?.text = String.localized("menu_advanced")
-        let arrowImage = UIImage(named: "next_screen_indicator_icon")?.withRenderingMode(.alwaysTemplate)
-        let arrowImageView = UIImageView(image: arrowImage)
-        arrowImageView.tintColor = DcColors.defaultInverseColor
-        arrowImageView.contentMode = .scaleAspectFit
-        cell.accessoryView = arrowImageView
+        cell.setCustomDisclosureIndicator(imageName: "next_screen_indicator_icon", tintColor: DcColors.defaultInverseColor)
         return cell
     }()
 
@@ -99,11 +79,7 @@ internal final class SettingsViewController: UITableViewController {
         let cell = UITableViewCell(style: .value1, reuseIdentifier: nil)
         cell.tag = CellTags.allAppsAndMedia.rawValue
         cell.textLabel?.text =  String.localized("all_apps_and_media")
-        let arrowImage = UIImage(named: "next_screen_indicator_icon")?.withRenderingMode(.alwaysTemplate)
-        let arrowImageView = UIImageView(image: arrowImage)
-        arrowImageView.tintColor = DcColors.defaultInverseColor
-        arrowImageView.contentMode = .scaleAspectFit
-        cell.accessoryView = arrowImageView
+        cell.setCustomDisclosureIndicator(imageName: "next_screen_indicator_icon", tintColor: DcColors.defaultInverseColor)
         return cell
     }()
 
@@ -111,11 +87,7 @@ internal final class SettingsViewController: UITableViewController {
         let cell = UITableViewCell(style: .value1, reuseIdentifier: nil)
         cell.tag = CellTags.inviteFriends.rawValue
         cell.textLabel?.text = String.localized("invite_friends")
-        let arrowImage = UIImage(named: "next_screen_indicator_icon")?.withRenderingMode(.alwaysTemplate)
-        let arrowImageView = UIImageView(image: arrowImage)
-        arrowImageView.tintColor = DcColors.defaultInverseColor
-        arrowImageView.contentMode = .scaleAspectFit
-        cell.accessoryView = arrowImageView
+        cell.setCustomDisclosureIndicator(imageName: "next_screen_indicator_icon", tintColor: DcColors.defaultInverseColor)
         return cell
     }()
 
@@ -123,11 +95,7 @@ internal final class SettingsViewController: UITableViewController {
         let cell = UITableViewCell(style: .value1, reuseIdentifier: nil)
         cell.tag = CellTags.help.rawValue
         cell.textLabel?.text = String.localized("menu_help")
-        let arrowImage = UIImage(named: "next_screen_indicator_icon")?.withRenderingMode(.alwaysTemplate)
-        let arrowImageView = UIImageView(image: arrowImage)
-        arrowImageView.tintColor = DcColors.defaultInverseColor
-        arrowImageView.contentMode = .scaleAspectFit
-        cell.accessoryView = arrowImageView
+        cell.setCustomDisclosureIndicator(imageName: "next_screen_indicator_icon", tintColor: DcColors.defaultInverseColor)
         return cell
     }()
 
@@ -135,11 +103,7 @@ internal final class SettingsViewController: UITableViewController {
         let cell = UITableViewCell(style: .subtitle, reuseIdentifier: nil)
         cell.tag = CellTags.connectivity.rawValue
         cell.textLabel?.text = String.localized("connectivity")
-        let arrowImage = UIImage(named: "next_screen_indicator_icon")?.withRenderingMode(.alwaysTemplate)
-        let arrowImageView = UIImageView(image: arrowImage)
-        arrowImageView.tintColor = DcColors.defaultInverseColor
-        arrowImageView.contentMode = .scaleAspectFit
-        cell.accessoryView = arrowImageView
+        cell.setCustomDisclosureIndicator(imageName: "next_screen_indicator_icon", tintColor: DcColors.defaultInverseColor)
         return cell
     }()
 
@@ -147,11 +111,7 @@ internal final class SettingsViewController: UITableViewController {
         let cell = UITableViewCell()
         cell.tag = CellTags.selectBackground.rawValue
         cell.textLabel?.text = String.localized("pref_background")
-        let arrowImage = UIImage(named: "next_screen_indicator_icon")?.withRenderingMode(.alwaysTemplate)
-        let arrowImageView = UIImageView(image: arrowImage)
-        arrowImageView.tintColor = DcColors.defaultInverseColor
-        arrowImageView.contentMode = .scaleAspectFit
-        cell.accessoryView = arrowImageView
+        cell.setCustomDisclosureIndicator(imageName: "next_screen_indicator_icon", tintColor: DcColors.defaultInverseColor)
         return cell
     }()
 
