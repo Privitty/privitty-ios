@@ -270,7 +270,7 @@ class ContactCell: UITableViewCell {
     }
 
     private func setStatusIndicators(unreadCount: Int, status: Int, visibility: Int32, isLocationStreaming: Bool, isChatMuted: Bool = false, isAccountMuted: Bool = false, isContactRequest: Bool, isArchiveLink: Bool) {
-        unreadMessageCounter.backgroundColor = isChatMuted || isAccountMuted || isArchiveLink  ? DcColors.unreadBadgeMuted : DcColors.unreadBadge
+        unreadMessageCounter.backgroundColor = isChatMuted || isAccountMuted || isArchiveLink  ? DcColors.unreadBadgeMuted : DcColors.privittyThemeColor
 
         if isLargeText {
             unreadMessageCounter.setCount(unreadCount)

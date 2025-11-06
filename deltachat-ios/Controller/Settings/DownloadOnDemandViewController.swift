@@ -50,15 +50,24 @@ class DownloadOnDemandViewController: UITableViewController {
     }
 
     override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
-        tableView.deselectRow(at: indexPath, animated: true) // animated as no other elements pop up
+        tableView.deselectRow(at: indexPath, animated: true)
 
         if let lastSelectedIndex = options.firstIndex(of: dcContext.getConfigInt("download_limit")) {
-            let oldSelectedCell = tableView.cellForRow(at: IndexPath.init(row: lastSelectedIndex, section: 0))
-            oldSelectedCell?.accessoryType = .none
+            let oldIndexPath = IndexPath(row: lastSelectedIndex, section: 0)
+            if let oldSelectedCell = tableView.cellForRow(at: oldIndexPath) {
+                oldSelectedCell.accessoryType = .none
+                oldSelectedCell.tintColor = .secondaryLabel
+                oldSelectedCell.backgroundColor = DcColors.settingScreenBackgroundColor
+                oldSelectedCell.contentView.backgroundColor = DcColors.settingScreenBackgroundColor
+            }
         }
 
-        let newSelectedCell = tableView.cellForRow(at: IndexPath.init(row: indexPath.row, section: 0))
-        newSelectedCell?.accessoryType = .checkmark
+        if let newSelectedCell = tableView.cellForRow(at: indexPath) {
+            newSelectedCell.accessoryType = .checkmark
+            newSelectedCell.tintColor = DcColors.defaultInverseColor
+            newSelectedCell.backgroundColor = DcColors.iconBackgroundColor
+            newSelectedCell.contentView.backgroundColor = DcColors.iconBackgroundColor
+        }
 
         dcContext.setConfigInt("download_limit", options[indexPath.row])
     }
@@ -67,7 +76,20 @@ class DownloadOnDemandViewController: UITableViewController {
         let cell = staticCells[indexPath.row]
         if options[indexPath.row] == dcContext.getConfigInt("download_limit") {
             cell.accessoryType = .checkmark
+            cell.tintColor = DcColors.privittyThemeColor
         }
         return cell
+    }
+    
+    override func tableView(_ tableView: UITableView, willDisplay cell: UITableViewCell, forRowAt indexPath: IndexPath) {
+        let selectedValue = dcContext.getConfigInt("download_limit")
+        if options[indexPath.row] != selectedValue {
+            let bgColor = DcColors.settingScreenBackgroundColor
+            cell.backgroundColor = bgColor
+            cell.contentView.backgroundColor = bgColor
+        } else {
+            cell.backgroundColor = DcColors.iconBackgroundColor
+            cell.contentView.backgroundColor = DcColors.iconBackgroundColor
+        }
     }
 }

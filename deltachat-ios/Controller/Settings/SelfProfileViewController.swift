@@ -127,7 +127,7 @@ class SelfProfileViewController: UITableViewController, MediaPickerDelegate {
 
     private func enlargeAvatarPressed(_ action: UIAlertAction) {
         // temporarily save to file as PreviewController uses QLPreviewItem which does not accept UIImage
-        guard let image = avatarSelectionCell.badge.getImage() else { return }
+        guard let image = avatarSelectionCell.getAvatarImage() else { return }
         let url = FileManager.default.temporaryDirectory.appendingPathComponent("preview.png")
         guard let imageData = image.pngData() else { return }
         guard (try? imageData.write(to: url)) != nil else { return }

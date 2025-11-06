@@ -36,26 +36,56 @@ internal final class NotificationsViewController: UITableViewController {
                     NotificationManager.removeAllNotifications()
                 }
 
-                updateCells()
-                updateNotificationWarning()
-                NotificationManager.updateBadgeCounters()
-                NotificationCenter.default.post(name: Event.messagesChanged, object: nil, userInfo: ["message_id": Int(0), "chat_id": Int(0)])
-        })
-    }()
+                UIView.animate(withDuration: 0.25) {
+                    if cell.uiSwitch.isOn {
+                        cell.uiSwitch.onTintColor = DcColors.iconBackgroundColor
+                        cell.uiSwitch.thumbTintColor = DcColors.privittyThemeColor
+                    } else {
+                        cell.uiSwitch.onTintColor = DcColors.settingScreenBackgroundColor
+                        cell.uiSwitch.thumbTintColor = DcColors.switchOnOffStateColor
+                    }
+                }
 
+                // Update dependent UI and notifications
+                self.updateCells()
+                self.updateNotificationWarning()
+                NotificationManager.updateBadgeCounters()
+
+                NotificationCenter.default.post(
+                    name: Event.messagesChanged,
+                    object: nil,
+                    userInfo: ["message_id": Int(0), "chat_id": Int(0)]
+                )
+            }
+        )
+    }()
+    
     private lazy var mentionsCell: SwitchCell = {
         return SwitchCell(
             textLabel: String.localized("pref_mention_notifications"),
-            on: false, // set in updateCells()
+            on: false,
             action: { [weak self] cell in
-                self?.dcContext.setMentionsEnabled(cell.isOn)
-        })
+                guard let self else { return }
+                self.dcContext.setMentionsEnabled(cell.isOn)
+
+                UIView.animate(withDuration: 0.25) {
+                    if cell.uiSwitch.isOn {
+                        cell.uiSwitch.onTintColor = DcColors.iconBackgroundColor
+                        cell.uiSwitch.thumbTintColor = DcColors.privittyThemeColor
+                    } else {
+                        cell.uiSwitch.onTintColor = DcColors.settingScreenBackgroundColor
+                        cell.uiSwitch.thumbTintColor = DcColors.switchOnOffStateColor
+                    }
+                }
+            }
+        )
     }()
 
     private lazy var systemSettingsCell: ActionCell = {
         let cell = ActionCell()
         cell.tag = CellTags.systemSettings.rawValue
         cell.textLabel?.text = String.localized("system_settings")
+        cell.textLabel?.textColor =  DcColors.privittyThemeColor
         return cell
     }()
 
@@ -156,10 +186,36 @@ internal final class NotificationsViewController: UITableViewController {
             break
         }
     }
+    
+    override func tableView(_ tableView: UITableView, willDisplay cell: UITableViewCell, forRowAt indexPath: IndexPath) {
+        let bgColor = DcColors.settingScreenBackgroundColor
+        cell.backgroundColor = bgColor
+        cell.contentView.backgroundColor = bgColor
+    }
+ 
+    private func updateSwitchColors(_ uiSwitch: UISwitch, isOn: Bool) {
+        UIView.animate(withDuration: 0.25) {
+            if isOn {
+                uiSwitch.onTintColor = DcColors.iconBackgroundColor       // Track when ON
+                uiSwitch.thumbTintColor = DcColors.privittyThemeColor     // Circle when ON
+            } else {
+                uiSwitch.onTintColor = DcColors.settingScreenBackgroundColor // Track when OFF
+                uiSwitch.thumbTintColor = DcColors.switchOnOffStateColor     // Circle when OFF
+            }
+        }
+    }
 
+    
     private func updateCells() {
-        mentionsCell.uiSwitch.isEnabled = !dcContext.isMuted()
-        mentionsCell.uiSwitch.isOn = !dcContext.isMuted() && dcContext.isMentionsEnabled
+        let isMuted = dcContext.isMuted()
+        let isMentionsEnabled = dcContext.isMentionsEnabled
+        let mentionSwitch = mentionsCell.uiSwitch
+        mentionSwitch.isEnabled = !isMuted
+        mentionSwitch.setOn(!isMuted && isMentionsEnabled, animated: false)
+        updateSwitchColors(mentionSwitch, isOn: mentionSwitch.isOn)
+        let notifSwitch = notificationsCell.uiSwitch
+        notifSwitch.setOn(!isMuted, animated: false)
+        updateSwitchColors(notifSwitch, isOn: notifSwitch.isOn)
     }
 
     private func updateNotificationWarning() {

@@ -62,6 +62,7 @@ class AutodelOptionsViewController: UITableViewController {
             let cell = UITableViewCell(style: .default, reuseIdentifier: nil)
             cell.textLabel?.text = String.localized($0.descr)
             cell.accessoryType = $0.value==currVal ? .checkmark : .none
+            cell.tintColor = DcColors.privittyThemeColor
             return cell
         })
     }
@@ -117,31 +118,41 @@ class AutodelOptionsViewController: UITableViewController {
     override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         tableView.deselectRow(at: indexPath, animated: false)
 
-        let oldSelectedCell = tableView.cellForRow(at: IndexPath.init(row: self.valToIndex(val: self.currVal), section: 0))
-        let newSelectedCell = tableView.cellForRow(at: IndexPath.init(row: indexPath.row, section: 0))
+        let oldIndex = self.valToIndex(val: self.currVal)
+        let oldSelectedCell = tableView.cellForRow(at: IndexPath(row: oldIndex, section: 0))
+        let newSelectedCell = tableView.cellForRow(at: indexPath)
         let newVal = self.autodelOptions[indexPath.row].value
+
+        oldSelectedCell?.accessoryType = .none
+        oldSelectedCell?.backgroundColor = DcColors.settingScreenBackgroundColor
+        oldSelectedCell?.contentView.backgroundColor = DcColors.settingScreenBackgroundColor
+
+        newSelectedCell?.accessoryType = .checkmark
+        newSelectedCell?.backgroundColor = DcColors.iconBackgroundColor
+        newSelectedCell?.contentView.backgroundColor = DcColors.iconBackgroundColor
 
         if newVal != currVal && newVal != 0 {
             let delCount = dcContext.estimateDeletionCnt(fromServer: fromServer, timeout: newVal)
             let newDescr = String.localized(self.autodelOptions[indexPath.row].descr)
-            let msg = String.localizedStringWithFormat(String.localized(fromServer ? "autodel_server_ask" : "autodel_device_ask"), delCount, newDescr)
+            let msg = String.localizedStringWithFormat(
+                String.localized(fromServer ? "autodel_server_ask" : "autodel_device_ask"),
+                delCount,
+                newDescr
+            )
             let alert = UIAlertController(
                 title: String.localized(fromServer ? "autodel_server_title" : "autodel_device_title"),
                 message: msg,
-                preferredStyle: .alert)
+                preferredStyle: .alert
+            )
             alert.addAction(UIAlertAction(title: String.localized("autodel_confirm"), style: .destructive, handler: { _ in
-                oldSelectedCell?.accessoryType = .none
-                newSelectedCell?.accessoryType = .checkmark
                 self.currVal = newVal
-                self.tableView.reloadData() // needed to update footer
+                self.tableView.reloadData()
             }))
             alert.addAction(UIAlertAction(title: String.localized("cancel"), style: .cancel))
             present(alert, animated: true, completion: nil)
         } else {
-            oldSelectedCell?.accessoryType = .none
-            newSelectedCell?.accessoryType = .checkmark
             currVal = newVal
-            self.tableView.reloadData() // needed to update footer
+            self.tableView.reloadData()
         }
     }
 
@@ -158,6 +169,16 @@ class AutodelOptionsViewController: UITableViewController {
             return String.localized("autodel_server_enabled_hint")
         }
         return nil
+    }
+    
+    override func tableView(_ tableView: UITableView, willDisplay cell: UITableViewCell, forRowAt indexPath: IndexPath) {
+        if autodelOptions[indexPath.row].value == currVal {
+            cell.backgroundColor = DcColors.iconBackgroundColor
+            cell.contentView.backgroundColor = DcColors.iconBackgroundColor
+        } else {
+            cell.backgroundColor = DcColors.settingScreenBackgroundColor
+            cell.contentView.backgroundColor = DcColors.settingScreenBackgroundColor
+        }
     }
 
     // MARK: - actions

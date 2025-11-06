@@ -139,39 +139,110 @@ class NewChatViewController: UITableViewController {
             return ContactCell.cellHeight
         }
     }
-
+    
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let section = indexPath.section
         let row = indexPath.row
-        
+
         if section == sectionNew {
-            guard let actionCell = tableView.dequeueReusableCell(withIdentifier: ActionCell.reuseIdentifier, for: indexPath) as? ActionCell else { fatalError("No Action Cell") }
+            guard let actionCell = tableView.dequeueReusableCell(
+                withIdentifier: ActionCell.reuseIdentifier,
+                for: indexPath
+            ) as? ActionCell else {
+                fatalError("No Action Cell")
+            }
+
+            func configureCell(cell: ActionCell, imageName: String, title: String) {
+                cell.contentView.subviews.forEach { if $0.tag == 999 { $0.removeFromSuperview() } }
+                let iconBackgroundView = UIView()
+                iconBackgroundView.translatesAutoresizingMaskIntoConstraints = false
+                iconBackgroundView.backgroundColor = DcColors.iconBackgroundColor
+                iconBackgroundView.layer.cornerRadius = 22.5
+                iconBackgroundView.layer.masksToBounds = true
+                iconBackgroundView.tag = 999
+                cell.contentView.addSubview(iconBackgroundView)
+
+                let iconImageView = UIImageView()
+                iconImageView.translatesAutoresizingMaskIntoConstraints = false
+                iconImageView.contentMode = .scaleAspectFit
+                iconImageView.tintColor = DcColors.privittyThemeColor
+                if let image = UIImage(named: imageName)?.withRenderingMode(.alwaysTemplate) {
+                    iconImageView.image = image
+                }
+                iconBackgroundView.addSubview(iconImageView)
+
+                NSLayoutConstraint.activate([
+                    iconBackgroundView.leadingAnchor.constraint(equalTo: cell.contentView.leadingAnchor, constant: 16),
+                    iconBackgroundView.centerYAnchor.constraint(equalTo: cell.contentView.centerYAnchor),
+                    iconBackgroundView.widthAnchor.constraint(equalToConstant: 45),
+                    iconBackgroundView.heightAnchor.constraint(equalToConstant: 45),
+
+                    iconImageView.centerXAnchor.constraint(equalTo: iconBackgroundView.centerXAnchor),
+                    iconImageView.centerYAnchor.constraint(equalTo: iconBackgroundView.centerYAnchor),
+                    iconImageView.widthAnchor.constraint(equalToConstant: 25),
+                    iconImageView.heightAnchor.constraint(equalToConstant: 25)
+                ])
+
+                if let textLabel = cell.textLabel {
+                    textLabel.translatesAutoresizingMaskIntoConstraints = false
+                    NSLayoutConstraint.activate([
+                        textLabel.leadingAnchor.constraint(equalTo: iconBackgroundView.trailingAnchor, constant: 12),
+                        textLabel.centerYAnchor.constraint(equalTo: cell.contentView.centerYAnchor),
+                        textLabel.trailingAnchor.constraint(equalTo: cell.contentView.trailingAnchor, constant: -16)
+                    ])
+                }
+
+                cell.actionTitle = title
+                cell.textLabel?.textColor = DcColors.defaultInverseColor
+            }
 
             switch newOptions[row] {
             case .scanQRCode:
-                actionCell.imageView?.image = UIImage(systemName: "qrcode")
-                actionCell.actionTitle = String.localized("menu_new_contact")
+                configureCell(cell: actionCell,
+                              imageName: "new_contact_icon",
+                              title: String.localized("menu_new_contact"))
+
             case .newGroup:
-                actionCell.imageView?.image = UIImage(systemName: "plus")
-                actionCell.actionTitle = String.localized("menu_new_group")
+                configureCell(cell: actionCell,
+                              imageName: "new_group_icon",
+                              title: String.localized("menu_new_group"))
+
             case .newBroadcastList:
+                actionCell.contentView.subviews.forEach { if $0.tag == 999 { $0.removeFromSuperview() } }
                 actionCell.imageView?.image = UIImage(systemName: "plus")
                 actionCell.actionTitle = String.localized("new_channel")
+                actionCell.textLabel?.textColor = DcColors.privittyButtonsTextBlackColor
+
             case .newEmail:
+                actionCell.contentView.subviews.forEach { if $0.tag == 999 { $0.removeFromSuperview() } }
                 actionCell.imageView?.image = UIImage(systemName: "plus")
                 actionCell.actionTitle = String.localized("new_email")
+                actionCell.textLabel?.textColor = DcColors.privittyButtonsTextBlackColor
             }
 
             return actionCell
-        } else if section == sectionInviteFriends {
-            guard let actionCell = tableView.dequeueReusableCell(withIdentifier: ActionCell.reuseIdentifier, for: indexPath) as? ActionCell else { fatalError("No Action Cell") }
 
+        } else if section == sectionInviteFriends {
+            guard let actionCell = tableView.dequeueReusableCell(
+                withIdentifier: ActionCell.reuseIdentifier,
+                for: indexPath
+            ) as? ActionCell else {
+                fatalError("No Action Cell")
+            }
+
+            actionCell.contentView.subviews.forEach { if $0.tag == 999 { $0.removeFromSuperview() } }
             actionCell.imageView?.image = UIImage(systemName: "heart")
+            actionCell.textLabel?.textColor = DcColors.privittyButtonsTextBlackColor
             actionCell.actionTitle = String.localized("invite_friends")
             return actionCell
 
         } else {
-            guard let contactCell = tableView.dequeueReusableCell(withIdentifier: ContactCell.reuseIdentifier, for: indexPath) as? ContactCell else { fatalError("ContactCell expected") }
+            guard let contactCell = tableView.dequeueReusableCell(
+                withIdentifier: ContactCell.reuseIdentifier,
+                for: indexPath
+            ) as? ContactCell else {
+                fatalError("ContactCell expected")
+            }
 
             let contactCellViewModel = self.contactViewModelBy(row: indexPath.row)
             contactCell.updateCell(cellViewModel: contactCellViewModel)

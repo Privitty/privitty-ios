@@ -38,7 +38,7 @@ internal final class SettingsViewController: UITableViewController {
         let cellViewModel = ProfileViewModel(context: dcContext)
         cell.updateCell(cellViewModel: cellViewModel)
         cell.tag = CellTags.profile.rawValue
-        cell.accessoryType = .disclosureIndicator
+        cell.setCustomDisclosureIndicator(imageName: "next_screen_indicator_icon", tintColor: DcColors.defaultInverseColor)
         return cell
     }()
 
@@ -46,8 +46,7 @@ internal final class SettingsViewController: UITableViewController {
         let cell = UITableViewCell(style: .value1, reuseIdentifier: nil)
         cell.tag = CellTags.chatsAndMedia.rawValue
         cell.textLabel?.text = String.localized("pref_chats")
-        cell.imageView?.image = UIImage(systemName: "message")
-        cell.accessoryType = .disclosureIndicator
+        cell.setCustomDisclosureIndicator(imageName: "next_screen_indicator_icon", tintColor: DcColors.defaultInverseColor)
         return cell
     }()
 
@@ -55,18 +54,16 @@ internal final class SettingsViewController: UITableViewController {
         let cell = UITableViewCell(style: .subtitle, reuseIdentifier: nil)
         cell.tag = CellTags.notifications.rawValue
         cell.textLabel?.text = String.localized("pref_notifications")
-        cell.imageView?.image = UIImage(systemName: "bell")
-        cell.accessoryType = .disclosureIndicator
+        cell.setCustomDisclosureIndicator(imageName: "next_screen_indicator_icon", tintColor: DcColors.defaultInverseColor)
         return cell
     }()
+
 
     private lazy var addAnotherDeviceCell: UITableViewCell = {
         let cell = UITableViewCell(style: .default, reuseIdentifier: nil)
         cell.tag = CellTags.addAnotherDevice.rawValue
         cell.textLabel?.text = String.localized("multidevice_title")
-        let imageName = if #available(iOS 15, *) { "ipad.and.iphone" } else { "rectangle.on.rectangle" }
-        cell.imageView?.image = UIImage(systemName: imageName)
-        cell.accessoryType = .disclosureIndicator
+        cell.setCustomDisclosureIndicator(imageName: "next_screen_indicator_icon", tintColor: DcColors.defaultInverseColor)
         return cell
     }()
 
@@ -74,9 +71,7 @@ internal final class SettingsViewController: UITableViewController {
         let cell = UITableViewCell(style: .value1, reuseIdentifier: nil)
         cell.tag = CellTags.advanced.rawValue
         cell.textLabel?.text = String.localized("menu_advanced")
-        let imageName = if #available(iOS 15, *) { "chevron.left.forwardslash.chevron.right" } else { "chevron.left.slash.chevron.right" }
-        cell.imageView?.image = UIImage(systemName: imageName)
-        cell.accessoryType = .disclosureIndicator
+        cell.setCustomDisclosureIndicator(imageName: "next_screen_indicator_icon", tintColor: DcColors.defaultInverseColor)
         return cell
     }()
 
@@ -84,8 +79,7 @@ internal final class SettingsViewController: UITableViewController {
         let cell = UITableViewCell(style: .value1, reuseIdentifier: nil)
         cell.tag = CellTags.allAppsAndMedia.rawValue
         cell.textLabel?.text =  String.localized("all_apps_and_media")
-        cell.imageView?.image = UIImage(systemName: "square.grid.2x2")
-        cell.accessoryType = .disclosureIndicator
+        cell.setCustomDisclosureIndicator(imageName: "next_screen_indicator_icon", tintColor: DcColors.defaultInverseColor)
         return cell
     }()
 
@@ -93,8 +87,7 @@ internal final class SettingsViewController: UITableViewController {
         let cell = UITableViewCell(style: .value1, reuseIdentifier: nil)
         cell.tag = CellTags.inviteFriends.rawValue
         cell.textLabel?.text = String.localized("invite_friends")
-        cell.imageView?.image = UIImage(systemName: "heart")
-        cell.accessoryType = .disclosureIndicator
+        cell.setCustomDisclosureIndicator(imageName: "next_screen_indicator_icon", tintColor: DcColors.defaultInverseColor)
         return cell
     }()
 
@@ -102,8 +95,7 @@ internal final class SettingsViewController: UITableViewController {
         let cell = UITableViewCell(style: .value1, reuseIdentifier: nil)
         cell.tag = CellTags.help.rawValue
         cell.textLabel?.text = String.localized("menu_help")
-        cell.imageView?.image = UIImage(systemName: "questionmark.circle")
-        cell.accessoryType = .disclosureIndicator
+        cell.setCustomDisclosureIndicator(imageName: "next_screen_indicator_icon", tintColor: DcColors.defaultInverseColor)
         return cell
     }()
 
@@ -111,8 +103,7 @@ internal final class SettingsViewController: UITableViewController {
         let cell = UITableViewCell(style: .subtitle, reuseIdentifier: nil)
         cell.tag = CellTags.connectivity.rawValue
         cell.textLabel?.text = String.localized("connectivity")
-        cell.imageView?.image = UIImage(systemName: "arrow.up.arrow.down")
-        cell.accessoryType = .disclosureIndicator
+        cell.setCustomDisclosureIndicator(imageName: "next_screen_indicator_icon", tintColor: DcColors.defaultInverseColor)
         return cell
     }()
 
@@ -120,13 +111,12 @@ internal final class SettingsViewController: UITableViewController {
         let cell = UITableViewCell()
         cell.tag = CellTags.selectBackground.rawValue
         cell.textLabel?.text = String.localized("pref_background")
-        cell.imageView?.image = UIImage(systemName: "photo")
-        cell.accessoryType = .disclosureIndicator
+        cell.setCustomDisclosureIndicator(imageName: "next_screen_indicator_icon", tintColor: DcColors.defaultInverseColor)
         return cell
     }()
 
     private lazy var sections: [SectionConfigs] = {
-        var appNameAndVersion = "Delta Chat"
+        var appNameAndVersion = "Privitty Chat"
         if let appVersion = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String {
             appNameAndVersion += " v" + appVersion
         }
@@ -168,6 +158,9 @@ internal final class SettingsViewController: UITableViewController {
         super.viewDidLoad()
         title = String.localized("menu_settings")
         tableView.rowHeight = UITableView.automaticDimension
+        
+        tableView.separatorStyle = .none
+        tableView.backgroundColor = .clear
     }
 
     override func viewWillAppear(_ animated: Bool) {
@@ -225,6 +218,24 @@ internal final class SettingsViewController: UITableViewController {
     override func tableView(_ tableView: UITableView, titleForFooterInSection section: Int) -> String? {
         return sections[section].footerTitle
     }
+    
+    override func tableView(_ tableView: UITableView, willDisplay cell: UITableViewCell, forRowAt indexPath: IndexPath) {
+
+        switch indexPath.section {
+        case 0:
+            cell.backgroundColor =  DcColors.settingScreenBackgroundColor
+        case 1:
+            cell.backgroundColor =  DcColors.settingScreenBackgroundColor
+        case 2:
+            cell.backgroundColor =  DcColors.settingScreenBackgroundColor
+        case 3:
+            cell.backgroundColor = DcColors.settingScreenBackgroundColor
+        default:
+            cell.backgroundColor = DcColors.settingScreenBackgroundColor
+        }
+        cell.contentView.backgroundColor = cell.backgroundColor
+    }
+
 
     // MARK: - Notifications
     @objc private func handleConnectivityChanged(_ notification: Notification) {

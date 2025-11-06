@@ -41,15 +41,26 @@ class MediaQualityViewController: UITableViewController {
     override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         return options.count
     }
-
+    
     override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
-        tableView.deselectRow(at: indexPath, animated: true) // animated as no other elements pop up
+        tableView.deselectRow(at: indexPath, animated: true)
 
-        let oldSelectedCell = tableView.cellForRow(at: IndexPath.init(row: dcContext.getConfigInt("media_quality"), section: 0))
-        oldSelectedCell?.accessoryType = .none
+        let oldIndexPath = IndexPath(row: dcContext.getConfigInt("media_quality"), section: 0)
 
-        let newSelectedCell = tableView.cellForRow(at: IndexPath.init(row: indexPath.row, section: 0))
-        newSelectedCell?.accessoryType = .checkmark
+        if let oldSelectedCell = tableView.cellForRow(at: oldIndexPath) {
+            oldSelectedCell.accessoryType = .none
+            oldSelectedCell.tintColor = .secondaryLabel
+            oldSelectedCell.backgroundColor = DcColors.settingScreenBackgroundColor
+            oldSelectedCell.contentView.backgroundColor = DcColors.settingScreenBackgroundColor
+        }
+
+        if let newSelectedCell = tableView.cellForRow(at: indexPath) {
+            newSelectedCell.accessoryType = .checkmark
+            newSelectedCell.tintColor = DcColors.defaultInverseColor
+
+            newSelectedCell.backgroundColor = DcColors.iconBackgroundColor
+            newSelectedCell.contentView.backgroundColor = DcColors.iconBackgroundColor
+        }
 
         dcContext.setConfigInt("media_quality", indexPath.row)
     }
@@ -58,7 +69,20 @@ class MediaQualityViewController: UITableViewController {
         let cell = staticCells[indexPath.row]
         if options[indexPath.row] == dcContext.getConfigInt("media_quality") {
             cell.accessoryType = .checkmark
+            cell.tintColor = DcColors.defaultInverseColor
         }
         return cell
+    }
+    
+    override func tableView(_ tableView: UITableView, willDisplay cell: UITableViewCell, forRowAt indexPath: IndexPath) {
+        let selectedValue = dcContext.getConfigInt("media_quality")
+        if options[indexPath.row] != selectedValue {
+            let bgColor = DcColors.settingScreenBackgroundColor
+            cell.backgroundColor = bgColor
+            cell.contentView.backgroundColor = bgColor
+        } else {
+            cell.backgroundColor = DcColors.iconBackgroundColor
+            cell.contentView.backgroundColor = DcColors.iconBackgroundColor
+        }
     }
 }

@@ -491,7 +491,7 @@ public class BaseMessageCell: UITableViewCell {
             } else if msg.isFromCurrentSender {
                 tintColor = DcColors.checkmarkGreen
             } else {
-                tintColor = DcColors.incomingMessageSecondaryTextColor
+                tintColor = DcColors.infoMessageColor
             }
 
             statusView.update(message: msg, tintColor: tintColor)
@@ -520,8 +520,8 @@ public class BaseMessageCell: UITableViewCell {
                 } else {
                     let contact = dcContext.getContact(id: quoteMsg.fromContactId)
                     quoteView.senderTitle.text = quoteMsg.getSenderName(contact, markOverride: true)
-                    quoteView.senderTitle.textColor = contact.color
-                    quoteView.citeBar.backgroundColor = contact.color
+                    quoteView.senderTitle.textColor = DcColors.unknownSender
+                    quoteView.citeBar.backgroundColor = DcColors.unknownSender
                 }
 
             }
@@ -529,7 +529,7 @@ public class BaseMessageCell: UITableViewCell {
             quoteView.isHidden = true
         }
 
-        messageLabel.attributedText = getFormattedText(messageText: msg.text, searchText: searchText, highlight: highlight)
+        messageLabel.attributedText = getFormattedText(messageText: msg.text, searchText: searchText, highlight: highlight, message: msg)
         messageLabel.delegate = self
 
         if let reactions = dcContext.getMessageReactions(messageId: msg.id) {
@@ -545,41 +545,63 @@ public class BaseMessageCell: UITableViewCell {
         self.dcMsgId = msg.id
     }
 
-    private func getFormattedText(messageText: String?, searchText: String?, highlight: Bool) -> NSAttributedString? {
-        if let messageText = messageText {
-            var fontSize = UIFont.preferredFont(for: .body, weight: .regular).pointSize
-            let charCount = messageText.count
-            if charCount <= 8 && messageText.containsOnlyEmoji { // render as jumbomoji
-                if charCount <= 2 {
-                    fontSize *= 3.0
-                } else if charCount <= 4 {
-                    fontSize *= 2.5
-                } else if charCount <= 6 {
-                    fontSize *= 1.75
-                } else {
-                    fontSize *= 1.35
-                }
-            }
+    private func getFormattedText(
+        messageText: String?,
+        searchText: String?,
+        highlight: Bool,
+        message: DcMsg
+    ) -> NSAttributedString? {
+        guard let messageText = messageText else { return nil }
 
-            let fontAttributes: [NSAttributedString.Key: Any] = [
-                .font: UIFont.systemFont(ofSize: fontSize),
-                .foregroundColor: DcColors.defaultTextColor
-            ]
-            let mutableAttributedString = NSMutableAttributedString(string: messageText, attributes: fontAttributes)
+        var fontSize = UIFont.preferredFont(forTextStyle: .body).pointSize
+        let charCount = messageText.count
 
-            if let searchText = searchText {
-                let ranges = messageText.ranges(of: searchText, options: .caseInsensitive)
-                for range in ranges {
-                    let nsRange = NSRange(range, in: messageText)
-                    mutableAttributedString.addAttribute(.font, value: UIFont.preferredFont(for: .body, weight: .semibold), range: nsRange)
-                    if highlight {
-                        mutableAttributedString.addAttribute(.backgroundColor, value: DcColors.highlight, range: nsRange)
-                    }
-                }
+        if charCount <= 8 && messageText.containsOnlyEmoji {
+            if charCount <= 2 {
+                fontSize *= 3.0
+            } else if charCount <= 4 {
+                fontSize *= 2.5
+            } else if charCount <= 6 {
+                fontSize *= 1.75
+            } else {
+                fontSize *= 1.35
             }
-            return mutableAttributedString
         }
-        return nil
+        let textColor: UIColor = message.isFromCurrentSender
+        ? DcColors.whiteTextColor
+        : DcColors.defaultInverseColor
+
+        let baseFont = UIFont.systemFont(ofSize: fontSize)
+        let fontAttributes: [NSAttributedString.Key: Any] = [
+            .font: baseFont,
+            .foregroundColor: textColor
+        ]
+
+        let mutableAttributedString = NSMutableAttributedString(
+            string: messageText,
+            attributes: fontAttributes
+        )
+
+        if let searchText = searchText, !searchText.isEmpty {
+            let ranges = messageText.ranges(of: searchText, options: .caseInsensitive)
+            for range in ranges {
+                let nsRange = NSRange(range, in: messageText)
+                mutableAttributedString.addAttribute(
+                    .font,
+                    value: UIFont.systemFont(ofSize: fontSize, weight: .semibold),
+                    range: nsRange
+                )
+                if highlight {
+                    mutableAttributedString.addAttribute(
+                        .backgroundColor,
+                        value: DcColors.highlight,
+                        range: nsRange
+                    )
+                }
+            }
+        }
+
+        return mutableAttributedString
     }
 
     public override func accessibilityElementDidBecomeFocused() {
@@ -628,9 +650,9 @@ public class BaseMessageCell: UITableViewCell {
         if isTransparent {
             backgroundColor = UIColor.init(alpha: 0, red: 0, green: 0, blue: 0)
         } else if message.isFromCurrentSender {
-            backgroundColor =  DcColors.messagePrimaryColor
+            backgroundColor =  DcColors.privittyThemeColor
         } else {
-            backgroundColor = DcColors.messageSecondaryColor
+            backgroundColor = DcColors.privittyMessageSecondaryColor
         }
         return backgroundColor
     }

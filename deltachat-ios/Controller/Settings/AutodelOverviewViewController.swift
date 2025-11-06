@@ -18,7 +18,7 @@ class AutodelOverviewViewController: UITableViewController {
     private lazy var autodelDeviceCell: UITableViewCell = {
         let cell = UITableViewCell(style: .value1, reuseIdentifier: nil)
         cell.tag = CellTags.autodelDevice.rawValue
-        cell.accessoryType = .disclosureIndicator
+        cell.setCustomDisclosureIndicator(imageName: "next_screen_indicator_icon", tintColor: DcColors.defaultInverseColor)
         cell.textLabel?.text = AutodelOptionsViewController.getSummary(dcContext, fromServer: false)
         return cell
     }()
@@ -26,7 +26,7 @@ class AutodelOverviewViewController: UITableViewController {
     private lazy var autodelServerCell: UITableViewCell = {
         let cell = UITableViewCell(style: .value1, reuseIdentifier: nil)
         cell.tag = CellTags.autodelServer.rawValue
-        cell.accessoryType = .disclosureIndicator
+        cell.setCustomDisclosureIndicator(imageName: "next_screen_indicator_icon", tintColor: DcColors.defaultInverseColor)
         cell.textLabel?.text = AutodelOptionsViewController.getSummary(dcContext, fromServer: true)
         return cell
     }()
@@ -108,4 +108,11 @@ class AutodelOverviewViewController: UITableViewController {
         }
 
     }
+    
+    override func tableView(_ tableView: UITableView, willDisplay cell: UITableViewCell, forRowAt indexPath: IndexPath) {
+        let bgColor = DcColors.settingScreenBackgroundColor
+        cell.backgroundColor = bgColor
+        cell.contentView.backgroundColor = bgColor
+    }
+
 }

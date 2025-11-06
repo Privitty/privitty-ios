@@ -31,10 +31,33 @@ class AllMediaViewController: UIPageViewController {
             headerTitle: String.localized("audio"),
             type1: DC_MSG_AUDIO, type2: DC_MSG_VOICE, type3: 0
         )]
-
+    
     private lazy var segmentControl: UISegmentedControl = {
-        let control = UISegmentedControl(items: pages.map({$0.headerTitle}))
-        control.tintColor = DcColors.primary
+        let control = UISegmentedControl(items: pages.map({ $0.headerTitle }))
+
+        // Background color for the entire control
+       // control.backgroundColor = DcColors.whiteBackgroundColor
+
+        // Color for the selected segment
+        control.selectedSegmentTintColor = DcColors.privittyThemeColor
+
+        // Text color for normal (unselected) segments
+        let normalTextAttributes: [NSAttributedString.Key: Any] = [
+            .foregroundColor: DcColors.defaultInverseColor,
+            .font: UIFont.systemFont(ofSize: 14, weight: .medium)
+        ]
+        control.setTitleTextAttributes(normalTextAttributes, for: .normal)
+
+        // Text color for selected segment
+        let selectedTextAttributes: [NSAttributedString.Key: Any] = [
+            .foregroundColor: DcColors.defaultBackgroundColor,
+            .font: UIFont.systemFont(ofSize: 14, weight: .medium)
+        ]
+        control.setTitleTextAttributes(selectedTextAttributes, for: .selected)
+
+        control.layer.cornerRadius = 8
+        control.clipsToBounds = true
+
         control.addTarget(self, action: #selector(segmentControlChanged), for: .valueChanged)
         control.selectedSegmentIndex = 0
         return control
@@ -63,10 +86,14 @@ class AllMediaViewController: UIPageViewController {
         navigationItem.titleView = segmentControl
         navigationItem.rightBarButtonItem = UserDefaults.standard.bool(forKey: "location_streaming") ? mapButton : nil
         navigationController?.navigationBar.scrollEdgeAppearance = navigationController?.navigationBar.standardAppearance
-
+        
         let page = pages[prevIndex]
         setViewControllers([makeViewController(page)], direction: .forward, animated: false, completion: nil)
         segmentControl.selectedSegmentIndex = prevIndex
+    }
+    
+    @objc private func backTapped() {
+        navigationController?.popViewController(animated: true)
     }
 
     // MARK: - actions
