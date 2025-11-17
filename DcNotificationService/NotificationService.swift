@@ -118,8 +118,20 @@ class NotificationService: UNNotificationServiceExtension {
         UserDefaults.setNseFetchingDone()
     }
 
-    /// Do not show anything; requires `com.apple.developer.usernotifications.filtering` entitlement
+    // FIXME: Old code, once apple approves the filteting request,
+    // we can uncomment the old code, and remove new code.
+    //  /// Do not show anything; requires `com.apple.developer.usernotifications.filtering` entitlement
+    //private func silentNotification() -> UNMutableNotificationContent {
+    //    UNMutableNotificationContent()
+    //}
+
+    /// Returns a notification with badge only (silent notification requires special entitlement)
     private func silentNotification() -> UNMutableNotificationContent {
-        UNMutableNotificationContent()
+        let content = UNMutableNotificationContent()
+        // Without the filtering entitlement, we can't return a completely silent notification
+        // But we can return one with just a badge update and no alert
+        content.sound = nil
+        content.body = ""
+        return content
     }
 }
