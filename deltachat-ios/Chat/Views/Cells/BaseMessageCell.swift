@@ -200,6 +200,7 @@ public class BaseMessageCell: UITableViewCell {
     private var dcContextId: Int?
     private var dcMsgId: Int?
     var a11yDcType: String?
+    var overrideMessageText: String?
 
     override init(style: UITableViewCell.CellStyle, reuseIdentifier: String?) {
 
@@ -529,7 +530,9 @@ public class BaseMessageCell: UITableViewCell {
             quoteView.isHidden = true
         }
 
-        messageLabel.attributedText = getFormattedText(messageText: msg.text, searchText: searchText, highlight: highlight, message: msg)
+        let messageTextToDisplay = overrideMessageText ?? msg.text
+        messageLabel.attributedText = getFormattedText(messageText: messageTextToDisplay, searchText: searchText, highlight: highlight, message: msg)
+        overrideMessageText = nil
         messageLabel.delegate = self
 
         if let reactions = dcContext.getMessageReactions(messageId: msg.id) {
@@ -683,6 +686,7 @@ public class BaseMessageCell: UITableViewCell {
         messageLabel.attributedText = nil
         messageLabel.delegate = nil
         quoteView.prepareForReuse()
+        overrideMessageText = nil
         actionButton.isEnabled = true
         showSelectionBackground = false
         reactionsView.prepareForReuse()

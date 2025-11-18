@@ -95,11 +95,13 @@ public class FileView: UIView {
         horizontalLayout = true
     }
 
-    public func configure(message: DcMsg, forceWebxdcSummary: String? = nil) {
+    public func configure(message: DcMsg,
+                          status: PrvContext.FileAccessStatusData? = nil,
+                          forceWebxdcSummary: String? = nil) {
         if message.type == DC_MSG_WEBXDC {
             configureWebxdc(message: message, forceWebxdcSummary: forceWebxdcSummary)
         } else if message.type == DC_MSG_FILE || message.isUnsupportedMediaFile {
-            configureFile(message: message)
+            configureFile(message: message, status: status)
         } else {
             logger.error("Configuring message failed")
         }
@@ -127,7 +129,7 @@ public class FileView: UIView {
         fileSubtitle.text = forceWebxdcSummary ?? (summary.isEmpty ? String.localized("webxdc_app") : summary)
     }
 
-    private func configureFile(message: DcMsg) {
+    private func configureFile(message: DcMsg, status: PrvContext.FileAccessStatusData?) {
         fileImageView.layer.cornerRadius = 0
         if let url = message.fileURL {
             generateThumbnailFor(url: url, placeholder: defaultImage)
@@ -139,8 +141,19 @@ public class FileView: UIView {
         fileTitle.lineBreakMode = .byCharWrapping
         fileTitle.font = UIFont.preferredFont(forTextStyle: .headline)
         fileSubtitle.font = UIFont.preferredFont(forTextStyle: .caption2)
+        fileSubtitle.numberOfLines = (status != nil && status?.status != .active) ? 2 : 1
+        fileSubtitle.lineBreakMode = .byWordWrapping
         fileTitle.text = message.filename
-        fileSubtitle.text = message.getPrettyFileSize()
+        let sizeText = message.getPrettyFileSize()
+        if let status, status.status != .active {
+            let statusDescription = status.status.userFacingDescription
+            fileSubtitle.text = "\(sizeText) • \(statusDescription)"
+            fileSubtitle.textColor = subtitleColor(for: status.status)
+        } else {
+            fileSubtitle.text = sizeText
+            fileSubtitle.textColor = UIColor.secondaryLabel
+        }
+
     }
 
     public func configureAccessibilityLabel() -> String {
@@ -158,6 +171,7 @@ public class FileView: UIView {
 
     public func prepareForReuse() {
         fileImageView.image = nil
+        fileSubtitle.textColor = UIColor.secondaryLabel
     }
 
     private func generateThumbnailFor(url: URL, placeholder: UIImage?) {
@@ -171,5 +185,19 @@ public class FileView: UIView {
         }
     }
 
-
+    private func subtitleColor(for status: PrvContext.FileAccessStatus) -> UIColor {
+        switch status {
+        case .active:
+            return UIColor.secondaryLabel
+        case .requested, .waitingOwnerAction:
+            return UIColor.systemOrange
+        case .expired:
+            return UIColor.systemOrange
+        case .revoked, .denied, .deleted:
+            return UIColor.systemRed
+        case .notFound:
+            return UIColor.systemGray
+        }
+    }
 }
+

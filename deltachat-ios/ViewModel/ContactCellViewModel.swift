@@ -104,6 +104,9 @@ class ChatCellViewModel: AvatarCellViewModel {
     }
 
     var subtitle: String {
+        if let subtitleOverride {
+            return subtitleOverride
+        }
         let result1 = summary.text1 ?? ""
         let result2 = summary.text2 ?? ""
         let result: String
@@ -114,6 +117,8 @@ class ChatCellViewModel: AvatarCellViewModel {
         }
         return result
     }
+
+    var subtitleOverride: String?
 
     var titleHighlightIndexes: [Int]
     var subtitleHighlightIndexes: [Int]

@@ -56,6 +56,8 @@
 	</array>
 	<key>CFBundleVersion</key>
 	<string>$(CURRENT_PROJECT_VERSION)</string>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>LSSupportsOpeningDocumentsInPlace</key>
@@ -64,6 +66,8 @@
 	<string>Delta Chat uses your camera to take and send photos and videos and to scan QR codes.</string>
 	<key>NSContactsUsageDescription</key>
 	<string>Delta Chat uses your contacts to show a list of email addresses you can write to. Delta Chat has no server, your contacts are not sent anywhere.</string>
+	<key>NSFaceIDUsageDescription</key>
+	<string>Delta Chat uses Face ID to protect your local profile, backup creation and second device setup.</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
 	<string>Delta Chat needs the location permission in order to share your location for the timespan you have enabled location sharing.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
@@ -74,18 +78,18 @@
 	<string>Delta Chat wants to save images to your photo library.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Delta Chat will let you choose which photos from your library to send.</string>
-	<key>PHPhotoLibraryPreventAutomaticLimitedAccessAlert</key>
-	<true/>
 	<key>NSUserActivityTypes</key>
 	<array>
 		<string>INSendMessageIntent</string>
 	</array>
+	<key>PHPhotoLibraryPreventAutomaticLimitedAccessAlert</key>
+	<true/>
 	<key>UIBackgroundModes</key>
 	<array>
-		<string>audio</string>
 		<string>fetch</string>
 		<string>location</string>
 		<string>remote-notification</string>
+		<string>audio</string>
 	</array>
 	<key>UIFileSharingEnabled</key>
 	<true/>
@@ -108,9 +112,5 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
-	<key>NSFaceIDUsageDescription</key>
-	<string>Delta Chat uses Face ID to protect your local profile, backup creation and second device setup.</string>
-	<key>ITSAppUsesNonExemptEncryption</key>
-	<false/>
 </dict>
 </plist>

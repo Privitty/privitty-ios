@@ -9,6 +9,7 @@ public class FileTextCell: BaseMessageCell, ReusableCell {
 
     private var spacerHeight: NSLayoutConstraint?
     var spacerWidth: NSLayoutConstraint?
+    private var fileAccessStatus: PrvContext.FileAccessStatusData?
 
     lazy var fileView: FileView = {
         let view = FileView()
@@ -31,6 +32,7 @@ public class FileTextCell: BaseMessageCell, ReusableCell {
     public override func prepareForReuse() {
         super.prepareForReuse()
         fileView.prepareForReuse()
+        fileAccessStatus = nil
     }
 
     override func update(dcContext: DcContext, msg: DcMsg, messageStyle: UIRectCorner, showAvatar: Bool, showName: Bool, searchText: String? = nil, highlight: Bool) {
@@ -41,7 +43,7 @@ public class FileTextCell: BaseMessageCell, ReusableCell {
             spacerHeight?.isActive = false
         }
         
-        fileView.configure(message: msg)
+        fileView.configure(message: msg, status: fileAccessStatus)
         a11yDcType = "\(String.localized("document")), \(fileView.configureAccessibilityLabel())"
         super.update(dcContext: dcContext,
                      msg: msg,
@@ -50,6 +52,11 @@ public class FileTextCell: BaseMessageCell, ReusableCell {
                      showName: showName,
                      searchText: searchText,
                      highlight: highlight)
+    }
+
+    public func applyFileAccessStatus(_ status: PrvContext.FileAccessStatusData?, message: DcMsg) {
+        fileAccessStatus = status
+        fileView.configure(message: message, status: status)
     }
     
 }

@@ -179,15 +179,10 @@ class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationCenterD
 
             // Ensure Privitty user is selected after account is configured
             let dcContext = dcAccounts.getSelected()
-            if let username = dcContext.displayname, !username.isEmpty {
-                let success = PrvContext.shared.ensureUserSetup(username: username)
-                if success {
-                    logger.info("Privitty user selected on app launch: \(username)")
-                } else {
-                    logger.error("Failed to select Privitty user on app launch: \(username)")
-                }
+            if PrvContext.shared.switchProfile(for: dcContext) {
+                logger.info("Privitty profile aligned with selected account on app launch")
             } else {
-                logger.warning("No displayname set, Privitty user not selected on app launch")
+                logger.error("Failed to align Privitty profile on app launch")
             }
         }
 
@@ -598,13 +593,10 @@ class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationCenterD
 
             // Ensure Privitty user is selected after account reload
             let dcContext = dcAccounts.getSelected()
-            if let username = dcContext.displayname, !username.isEmpty {
-                let success = PrvContext.shared.ensureUserSetup(username: username)
-                if success {
-                    logger.info("Privitty user selected on context reload: \(username)")
-                } else {
-                    logger.error("Failed to select Privitty user on context reload: \(username)")
-                }
+            if PrvContext.shared.switchProfile(for: dcContext) {
+                logger.info("Privitty profile aligned with selected account on context reload")
+            } else {
+                logger.error("Failed to align Privitty profile on context reload")
             }
         } else {
             appCoordinator.presentWelcomeController(accountCode: accountCode)
@@ -634,17 +626,19 @@ class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationCenterD
                     let chatId = event.data1Int
                     let msgId = event.data2Int
                     let dcMsg = dcContext.getMessage(id: msgId)
+                    let chatContext = dcContext.getChat(chatId: chatId)
 
                     // Check if message is encrypted and not a contact request
-                    if dcMsg.showEnvelope() && !dcContext.getChat(chatId: chatId).isContactRequest {
-                        logger.debug("Privitty: Encrypted message received")
+                    logger.debug("Privitty: Message received")
+                    if chatContext.isProtected && !chatContext.isContactRequest {
+                        logger.debug("Privitty: Protected message received")
 
                         if let messageText = dcMsg.text,
                            PrvContext.shared.isPrivittyMessage(messageText) {
                             logger.debug("Privitty: Message detected for chatId: \(chatId)")
 
                             // Process the Privitty message
-                            let result = PrvContext.shared.processIncomingMessage(pdu: messageText)
+                            let result = PrvContext.shared.processIncomingMessage(chatId: chatId, pdu: messageText, direction: "incoming")
 
                             if result.success {
                                 logger.info("Privitty: Message processed successfully")
