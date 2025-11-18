@@ -206,7 +206,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationCenterD
         }
         logger.info("➡️ open univeral link url")
 
-        if host == "i.delta.chat" {
+        if host == "i.privittytech.com" {
             appCoordinator.handleQRCode(incomingURL.absoluteString)
             return true
         } else {

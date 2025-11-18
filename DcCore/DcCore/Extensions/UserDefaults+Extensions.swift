@@ -8,7 +8,7 @@ public extension UserDefaults {
     static var nseFetchingKey = "nseFetching"
 
     static var shared: UserDefaults? {
-        return UserDefaults(suiteName: "group.chat.delta.ios")
+        return UserDefaults(suiteName: "group.chat.privitty.ios")
     }
 
     static var mainIoRunning: Bool {
