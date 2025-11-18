@@ -1,3 +1,15 @@
+"privitty_file_access_active" = "Access active";
+"privitty_file_access_requested" = "Access requested";
+"privitty_file_access_expired" = "Access expired";
+"privitty_file_access_revoked" = "Access revoked";
+"privitty_file_access_deleted" = "File deleted";
+"privitty_file_access_waiting_owner" = "Waiting for owner";
+"privitty_file_access_denied" = "Access denied";
+"privitty_file_access_not_found" = "File not found";
+"privitty_message_placeholder" = "Privitty Message";
+"request_access" = "Request Access";
+"privitty_handshake_message_start" = "Establishing guaranteed full control over your shared data, please wait ...";
+"privitty_handshake_message_ready" = "You are Privitty secure—take control and revoke data anytime.";
 // common strings without special context
 "app_name" = "Delta Chat";
 "ok" = "OK";

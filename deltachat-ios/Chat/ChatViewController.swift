@@ -167,6 +167,20 @@ class ChatViewController: UITableViewController, UITableViewDropDelegate {
         set { _bag = newValue }
     }
 
+    // MARK: - Privitty File Encryption Properties
+    // Store user input from attachment options
+    private var attachmentExpiryTime: String = ""
+    private var attachmentAllowDownload: Bool = false
+    private var attachmentAllowForward: Bool = false
+    private var pendingOneTimeKey: String?
+    private var fileAccessStatusCache: [Int: PrvContext.FileAccessStatusData] = [:]
+    private lazy var privittyDateFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        formatter.timeStyle = .short
+        return formatter
+    }()
+
     init(dcContext: DcContext, chatId: Int, highlightedMsg: Int? = nil) {
         self.dcContext = dcContext
         self.chatId = chatId
@@ -537,6 +551,13 @@ class ChatViewController: UITableViewController, UITableViewDropDelegate {
         }
 
         let message = dcContext.getMessage(id: id)
+
+        if let handshakeText = privittyHandshakeText(for: message) {
+            let cell = dequeueCell(ofType: InfoMessageCell.self)
+            cell.showSelectionBackground(tableView.isEditing)
+            cell.update(text: handshakeText)
+            return cell
+        }
         if message.isInfo {
             let cell = dequeueCell(ofType: InfoMessageCell.self)
             cell.showSelectionBackground(tableView.isEditing)
@@ -597,6 +618,11 @@ class ChatViewController: UITableViewController, UITableViewDropDelegate {
                     showName: showName,
                     searchText: searchController.searchBar.text,
                     highlight: !searchMessageIds.isEmpty && message.id == searchMessageIds[searchResultIndex])
+
+        if let fileCell = cell as? FileTextCell {
+            let status = fetchFileAccessStatus(for: message)
+            fileCell.applyFileAccessStatus(status, message: message)
+        }
 
         return cell
     }
@@ -884,7 +910,9 @@ class ChatViewController: UITableViewController, UITableViewDropDelegate {
         guard !tableView.isEditing else {
             return refreshMessagesAfterEditing = true
         }
-        messageIds = dcContext.getChatMsgs(chatId: chatId, flags: DC_GCM_ADDDAYMARKER).reversed()
+        fileAccessStatusCache.removeAll()
+        let rawMsgIds = dcContext.getChatMsgs(chatId: chatId, flags: DC_GCM_ADDDAYMARKER)
+        messageIds = applyPrivittyFilter(to: rawMsgIds).reversed()
         reloadData()
         showEmptyStateView(messageIds.isEmpty)
     }
@@ -899,13 +927,14 @@ class ChatViewController: UITableViewController, UITableViewDropDelegate {
 
     private func loadMessages() {
         // update message ids
+        fileAccessStatusCache.removeAll()
         var msgIds = dcContext.getChatMsgs(chatId: chatId, flags: DC_GCM_ADDDAYMARKER)
         let freshMsgsCount = self.dcContext.getUnreadMessages(chatId: self.chatId)
         if freshMsgsCount > 0 && msgIds.count >= freshMsgsCount {
             let index = msgIds.count - freshMsgsCount
             msgIds.insert(Int(DC_MSG_ID_MARKER1), at: index)
         }
-        self.messageIds = msgIds.reversed()
+        self.messageIds = applyPrivittyFilter(to: msgIds).reversed()
         self.showEmptyStateView(self.messageIds.isEmpty)
         self.reloadData()
     }
@@ -1128,11 +1157,9 @@ class ChatViewController: UITableViewController, UITableViewDropDelegate {
             }.onDeselected {
                 $0.tintColor = DcColors.defaultInverseColor
             }
-        attachButton.showsMenuAsPrimaryAction = true
-        attachButton.menu = UIMenu() // otherwise .menuActionTriggered is not triggered
         attachButton.addAction(UIAction { [weak self] _ in
-            attachButton.menu = self?.clipperButtonMenu()
-        }, for: .menuActionTriggered)
+             self?.handleAddAttachment()
+        }, for: .touchUpInside)
 
         let leftItems = [attachButton]
 
@@ -1176,33 +1203,6 @@ class ChatViewController: UITableViewController, UITableViewDropDelegate {
     }
 
     private func clipperButtonMenu() -> UIMenu {
-
-        // Create peer add request if chat is not protected
-        if !PrvContext.shared.isChatProtected(chatId: String(chatId)) {
-            let chat = dcContext.getChat(chatId: chatId)
-            let message = dcContext.getMessage(id: dcChat.id)
-            let result = PrvContext.shared.createPeerAddRequest(
-                chatId: String(chatId),
-                peerName: chat.name,
-                peerEmail: "milind@example.com",
-                peerId: String(message.fromContactId)
-            )
-
-            if result.success {
-                logger.info("Peer add request created successfully for chat \(chatId)")
-                if let pdu = result.pdu {
-
-                    // Send the PDU message to the chat
-                    let messageToSend: DcMsg = self.dcContext.newMessage(viewType: DC_MSG_TEXT)
-                    messageToSend.text = pdu
-
-                    self.dcContext.sendMessage(chatId: self.chatId, message: messageToSend)
-                    logger.info("Peer add request sent for chatId: \(self.chatId)")
-                }
-            } else {
-                logger.error("Failed to create peer add request: \(result.error ?? "Unknown error")")
-            }
-        }
 
         var actions = [UIMenuElement]()
         func action(_ localized: String, _ systemImage: String, attributes: UIMenuElement.Attributes = [], _ handler: @escaping () -> Void) -> UIAction {
@@ -1383,8 +1383,255 @@ class ChatViewController: UITableViewController, UITableViewDropDelegate {
         }
     }
 
+    private func handleAddAttachment() {
+        // Check if Privitty is initialized
+        guard PrvContext.shared.isInitialized() else {
+            logger.error("Privitty not initialized")
+            let alert = UIAlertController(
+                title: "Error",
+                message: "Privitty is not initialized",
+                preferredStyle: .alert
+            )
+            alert.addAction(UIAlertAction(title: "OK", style: .default))
+            present(alert, animated: true)
+            return
+        }
+
+        let chatIdString = String(self.chatId)
+        let isProtected = PrvContext.shared.isChatProtected(chatId: chatIdString)
+        
+        logger.info("ATTACH CLICKED - chatId: \(chatId), isProtected: \(isProtected)")
+
+        if isProtected {
+            logger.info("Chat already protected - Showing attachment popup")
+            showFileEncryptionOptions()
+        } else {
+            logger.info("Chat not protected - Initiating handshake")
+            sendPrivittyHandshake()
+        }
+    }
+
     private func showFilesLibrary() {
         mediaPicker?.showFilesLibrary()
+    }
+
+    private func sendPrivittyHandshake() {
+        let chat = dcContext.getChat(chatId: chatId)
+
+        logger.info("Initiating Privitty handshake for chat: \(chatId)")
+
+        // Ensure the Privitty profile matches the current Delta Chat account
+        if !PrvContext.shared.switchProfile(for: dcContext) {
+            logger.error("Failed to align Privitty profile before handshake for chat \(chatId)")
+            let alert = UIAlertController(
+                title: "Error",
+                message: "Failed to prepare secure channel. Please try again.",
+                preferredStyle: .alert
+            )
+            alert.addAction(UIAlertAction(title: "OK", style: .default))
+            present(alert, animated: true)
+            return
+        }
+
+        let chatIdString = String(chatId)
+        let userEmail = dcContext.getConfig("configured_addr") ?? ""
+        let userId = String(dcContext.getContact(id: Int(DC_CONTACT_ID_SELF)).id)
+        logger.debug("Handshake context - Email: \(userEmail), ID: \(userId)")
+
+        let result = PrvContext.shared.createPeerAddRequest(
+            chatId: chatIdString,
+            peerName: chat.name,
+            peerEmail: userEmail,
+            peerId: userId
+        )
+
+        guard result.success, let pdu = result.pdu, !pdu.isEmpty else {
+            logger.error("prvCreatePeerAddRequest returned empty/null - chatId: \(chatId)")
+            logger.error("This usually means: 1) Chat already protected, or 2) Handshake already in progress")
+
+            // Check if chat is actually protected
+            let isProtected = PrvContext.shared.isChatProtected(chatId: chatIdString)
+            logger.error("Checking protection status: isProtected = \(isProtected)")
+
+            if isProtected {
+                logger.info("Chat is protected, showing file encryption options directly")
+                showFileEncryptionOptions()
+            } else {
+                let alert = UIAlertController(
+                    title: "Error",
+                    message: "Failed to initialize secure channel",
+                    preferredStyle: .alert
+                )
+                alert.addAction(UIAlertAction(title: "OK", style: .default))
+                present(alert, animated: true)
+           }
+            return
+        }
+
+        // Send the handshake PDU
+        let handshakeMsg = dcContext.newMessage(viewType: DC_MSG_TEXT)
+        handshakeMsg.text = pdu
+        dcContext.sendMessage(chatId: self.chatId, message: handshakeMsg)
+
+        logger.info("Handshake PDU sent - chatId: \(chatId)")
+
+        // Show progress message
+        let progressAlert = UIAlertController(
+            title: "Initializing Secure Channel",
+            message: "Please wait...",
+            preferredStyle: .alert
+        )
+        present(progressAlert, animated: true)
+
+        // Wait for handshake to complete
+        waitForHandshakeAndOpenFilePicker(chatIdString: chatIdString, progressAlert: progressAlert)
+    }
+
+    private func waitForHandshakeAndOpenFilePicker(chatIdString: String, progressAlert: UIAlertController) {
+        let maxAttempts = 30  // 30 seconds timeout
+        var attemptCount = 0
+
+        Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] timer in
+            guard let self = self else {
+                timer.invalidate()
+                return
+            }
+
+            attemptCount += 1
+
+            let isProtected = PrvContext.shared.isChatProtected(chatId: chatIdString)
+
+            if isProtected {
+                timer.invalidate()
+                logger.info("HANDSHAKE COMPLETED - chatId: \(chatIdString) is now PROTECTED")
+                logger.info("This state should persist after app restart")
+                logger.info("Showing attachment options")
+
+                progressAlert.dismiss(animated: true) { [weak self] in
+                    let successAlert = UIAlertController(
+                        title: "Secure Channel Established",
+                        message: nil,
+                        preferredStyle: .alert
+                    )
+                    successAlert.addAction(UIAlertAction(title: "OK", style: .default) { [weak self] _ in
+                        self?.showFileEncryptionOptions()
+                    })
+                    self?.present(successAlert, animated: true)
+                }
+            } else if attemptCount >= maxAttempts {
+                timer.invalidate()
+                logger.error("HANDSHAKE TIMEOUT - chatId: \(chatIdString) after \(maxAttempts) seconds")
+
+                progressAlert.dismiss(animated: true) { [weak self] in
+                    let errorAlert = UIAlertController(
+                        title: "Timeout",
+                        message: "Failed to establish secure channel. Please try again.",
+                        preferredStyle: .alert
+                    )
+                    errorAlert.addAction(UIAlertAction(title: "OK", style: .default))
+                    self?.present(errorAlert, animated: true)
+                }
+            } else {
+                logger.debug("Waiting for handshake... attempt \(attemptCount)/\(maxAttempts)")
+            }
+        }
+    }
+
+    private func showFileEncryptionOptions() {
+        let alert = UIAlertController(
+            title: "File Encryption Options",
+            message: "Set access time and permissions for the file",
+            preferredStyle: .alert
+        )
+
+        // Add text field for expiry time
+        alert.addTextField { textField in
+            textField.placeholder = "Expiry time (seconds)"
+            textField.keyboardType = .numberPad
+            textField.text = self.attachmentExpiryTime
+        }
+
+        // Create a custom view for checkboxes
+        let containerView = UIView(frame: CGRect(x: 0, y: 0, width: 270, height: 80))
+        
+        // Allow Download Switch
+        let downloadLabel = UILabel(frame: CGRect(x: 16, y: 10, width: 180, height: 30))
+        downloadLabel.text = "Allow Download"
+        downloadLabel.font = UIFont.systemFont(ofSize: 14)
+        containerView.addSubview(downloadLabel)
+        
+        let downloadSwitch = UISwitch(frame: CGRect(x: 190, y: 10, width: 51, height: 31))
+        downloadSwitch.isOn = self.attachmentAllowDownload
+        downloadSwitch.tag = 1
+        containerView.addSubview(downloadSwitch)
+        
+        // Allow Forward Switch (disabled for now, matching Android)
+        let forwardLabel = UILabel(frame: CGRect(x: 16, y: 45, width: 180, height: 30))
+        forwardLabel.text = "Allow Forward (Coming Soon)"
+        forwardLabel.font = UIFont.systemFont(ofSize: 14)
+        forwardLabel.alpha = 0.5
+        containerView.addSubview(forwardLabel)
+        
+        let forwardSwitch = UISwitch(frame: CGRect(x: 190, y: 45, width: 51, height: 31))
+        forwardSwitch.isOn = false
+        forwardSwitch.isEnabled = false
+        forwardSwitch.alpha = 0.5
+        forwardSwitch.tag = 2
+        containerView.addSubview(forwardSwitch)
+        
+        // Add container as a custom view
+        let containerViewController = UIViewController()
+        containerViewController.view = containerView
+        containerViewController.preferredContentSize = containerView.frame.size
+        alert.setValue(containerViewController, forKey: "contentViewController")
+
+        // OK Button
+        alert.addAction(UIAlertAction(title: "OK", style: .default) { [weak self] _ in
+            guard let self = self else { return }
+            guard let textField = alert.textFields?.first else { return }
+            
+            let expiryTime = textField.text?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+            
+            // Validate input
+            guard !expiryTime.isEmpty else {
+                self.showErrorAlert(message: "Please enter expiry time in seconds")
+                return
+            }
+            
+            guard let seconds = Int(expiryTime), seconds > 0 else {
+                self.showErrorAlert(message: "Please enter a valid number greater than zero")
+                return
+            }
+            
+            // Store the values
+            self.attachmentExpiryTime = expiryTime
+            self.attachmentAllowDownload = downloadSwitch.isOn
+            self.attachmentAllowForward = forwardSwitch.isOn
+            
+            logger.info("File encryption options set: \(seconds)s, download: \(downloadSwitch.isOn), forward: \(forwardSwitch.isOn)")
+            
+            // Now open the file picker
+            self.mediaPicker?.showFilesLibrary()
+        })
+
+        // Cancel Button
+        alert.addAction(UIAlertAction(title: String.localized("cancel"), style: .cancel) { [weak self] _ in
+            // Clear values on cancel
+            self?.attachmentExpiryTime = ""
+            self?.attachmentAllowDownload = false
+            self?.attachmentAllowForward = false
+        })
+
+        present(alert, animated: true)
+    }
+
+    private func showErrorAlert(message: String) {
+        let alert = UIAlertController(title: "Error", message: message, preferredStyle: .alert)
+        alert.addAction(UIAlertAction(title: "OK", style: .default) { [weak self] _ in
+            // Re-show the encryption options dialog
+            self?.showFileEncryptionOptions()
+        })
+        present(alert, animated: true)
     }
 
     private func showVoiceMessageRecorder() {
@@ -1657,11 +1904,111 @@ class ChatViewController: UITableViewController, UITableViewDropDelegate {
 
     private func sendAttachmentMessage(viewType: Int32, filePath: String, fileName: String? = nil, message: String? = nil, quoteMessage: DcMsg? = nil) {
         let msg = draft.draftMsg ?? dcContext.newMessage(viewType: viewType)
-        msg.setFile(filepath: filePath, fileName: fileName)
+        
+        // PRIVITTY: Encrypt file if encryption options are set
+        if !attachmentExpiryTime.isEmpty {
+            do {
+                let originalFileName = fileName ?? URL(fileURLWithPath: filePath).lastPathComponent
+                guard let expiryTimeSeconds = Int(attachmentExpiryTime) else {
+                    throw NSError(domain: "Privitty", code: 1, userInfo: [NSLocalizedDescriptionKey: "Invalid expiry time"])
+                }
+                
+                logger.info("Privitty: Encrypting file before sending")
+                logger.debug("Privitty: File: \(filePath)")
+                logger.debug("Privitty: Original filename: \(originalFileName)")
+                
+                let encryptionResult = PrvContext.shared.requestFileEncryption(
+                    filePath: filePath,
+                    chatId: String(self.chatId),
+                    allowDownload: attachmentAllowDownload,
+                    allowForward: attachmentAllowForward,
+                    accessTime: expiryTimeSeconds
+                )
+                
+                if encryptionResult.success, let data = encryptionResult.data {
+                    guard let prvFileName = data["prv_file_name"] as? String,
+                          let oneTimeKey = data["one_time_key"] as? String else {
+                        throw NSError(domain: "Privitty", code: 2, userInfo: [NSLocalizedDescriptionKey: "Missing encryption data"])
+                    }
+                    
+                    let displayFileName = originalFileName + ".prv"
+                    
+                    logger.info("Privitty: File encrypted successfully!")
+                    logger.debug("Privitty: Encrypted file: \(prvFileName)")
+                    logger.debug("Privitty: Display name: \(displayFileName)")
+                    
+                    // Store one-time key to send after message is sent
+                    self.pendingOneTimeKey = oneTimeKey
+                    
+                    // Set the encrypted file
+                    msg.setFile(filepath: prvFileName, fileName: displayFileName, mimeType: "application/octet-stream")
+                    
+                    // Clear encryption options for next attachment
+                    attachmentExpiryTime = ""
+                    attachmentAllowDownload = false
+                    attachmentAllowForward = false
+                } else {
+                    let errorMsg = encryptionResult.error ?? "Unknown error"
+                    logger.error("Privitty: Encryption failed: \(errorMsg)")
+                    
+                    // Show error to user
+                    DispatchQueue.main.async { [weak self] in
+                        let alert = UIAlertController(
+                            title: "Encryption Failed",
+                            message: errorMsg,
+                            preferredStyle: .alert
+                        )
+                        alert.addAction(UIAlertAction(title: "OK", style: .default))
+                        self?.present(alert, animated: true)
+                    }
+                    return
+                }
+            } catch {
+                logger.error("Privitty: Encryption error: \(error.localizedDescription)")
+                
+                // Show error to user
+                DispatchQueue.main.async { [weak self] in
+                    let alert = UIAlertController(
+                        title: "Encryption Error",
+                        message: error.localizedDescription,
+                        preferredStyle: .alert
+                    )
+                    alert.addAction(UIAlertAction(title: "OK", style: .default))
+                    self?.present(alert, animated: true)
+                }
+                return
+            }
+        } else {
+            // No encryption, set file normally
+            msg.setFile(filepath: filePath, fileName: fileName)
+        }
+
         msg.text = (message ?? "").isEmpty ? nil : message
         msg.quoteMessage = quoteMessage
 
         dcContext.sendMessage(chatId: self.chatId, message: msg)
+        
+        // Send one-time key if pending
+        sendPendingOneTimeKey()
+    }
+
+    private func sendPendingOneTimeKey() {
+        guard let oneTimeKey = pendingOneTimeKey else {
+            logger.debug("Privitty: No pending one-time key to send")
+            return
+        }
+        
+        logger.info("Privitty: Sending one-time key")
+        
+        // Send the one-time key as a text message
+        let keyMsg = dcContext.newMessage(viewType: DC_MSG_TEXT)
+        keyMsg.text = oneTimeKey
+        dcContext.sendMessage(chatId: self.chatId, message: keyMsg)
+        
+        logger.info("Privitty: One-time key sent successfully")
+        
+        // Clear pending key
+        pendingOneTimeKey = nil
     }
 
     private func sendVoiceMessage(url: NSURL) {
@@ -2282,6 +2629,8 @@ extension ChatViewController: BaseMessageCellDelegate {
         let message = dcContext.getMessage(id: messageIds[indexPath.row])
         if message.state == DC_STATE_OUT_FAILED {
             info(for: message.id)
+        } else if message.type == DC_MSG_FILE {
+            handleFileTapped(message: message)
         } else if message.type == DC_MSG_VCARD {
             didTapVcard(msg: message)
         } else if message.type == DC_MSG_WEBXDC {
@@ -2373,6 +2722,286 @@ extension ChatViewController: BaseMessageCellDelegate {
         if message.state == DC_STATE_OUT_FAILED {
             info(for: message.id)
         }
+    }
+
+    // MARK: - Privitty file handling
+
+    private func fetchFileAccessStatus(for message: DcMsg, ensureProfile: Bool = true) -> PrvContext.FileAccessStatusData? {
+        guard let filePath = message.file, filePath.lowercased().hasSuffix(".prv") else {
+            fileAccessStatusCache.removeValue(forKey: message.id)
+            return nil
+        }
+
+        if let cached = fileAccessStatusCache[message.id] {
+            return cached
+        }
+
+        if ensureProfile {
+            guard PrvContext.shared.switchProfile(for: dcContext) else {
+                logger.error("Privitty: Failed to align profile before fetching file status")
+                return nil
+            }
+        }
+
+        let result = PrvContext.shared.getFileAccessStatus(chatId: String(message.chatId), filePath: filePath)
+        if result.success {
+            if let data = result.data {
+                fileAccessStatusCache[message.id] = data
+                return data
+            }
+            fileAccessStatusCache.removeValue(forKey: message.id)
+            return nil
+        } else {
+            if let error = result.error {
+                logger.warning("Privitty: File access status fetch failed - \(error)")
+            }
+            if let data = result.data {
+                fileAccessStatusCache[message.id] = data
+                return data
+            }
+            return nil
+        }
+    }
+
+    private func handleFileTapped(message: DcMsg) {
+        if message.downloadState != DC_DOWNLOAD_DONE {
+            logger.info("Privitty: File not downloaded yet, requesting download")
+            dcContext.downloadFullMessage(id: message.id)
+            return
+        }
+
+        guard let filePath = message.file else {
+            logger.error("Privitty: File path not available for message \(message.id)")
+            return
+        }
+
+        if filePath.lowercased().hasSuffix(".prv") {
+            openPrivittyFile(message: message, encryptedFilePath: filePath)
+        } else if let fileURL = message.fileURL {
+            openFilePreview(url: fileURL, suggestedName: message.filename)
+        } else {
+            logger.error("Privitty: Unable to determine file URL for message \(message.id)")
+        }
+    }
+
+    private func openPrivittyFile(message: DcMsg, encryptedFilePath: String) {
+        let chatIdString = String(message.chatId)
+
+        // Ensure Privitty profile matches the current account
+        guard PrvContext.shared.switchProfile(for: dcContext) else {
+            logger.error("Privitty: Failed to align profile before decryption")
+            presentAlert(title: "Error", message: "Unable to prepare secure channel.")
+            return
+        }
+
+        let statusData = fetchFileAccessStatus(for: message, ensureProfile: false)
+
+        if !message.isFromCurrentSender {
+            guard let statusData else {
+                logger.warning("Privitty: No access status available for message \(message.id)")
+                presentAlert(title: "Unavailable", message: "Unable to verify file access for this attachment.")
+                return
+            }
+
+            switch statusData.status {
+            case .active:
+                break
+            case .expired:
+                showFileAccessRequestDialog(for: message, status: statusData)
+                return
+            case .requested, .waitingOwnerAction:
+                presentAlert(title: "Request Pending", message: statusData.status.userFacingDescription)
+                return
+            case .revoked:
+                presentAlert(title: "Access Revoked", message: statusData.status.userFacingDescription)
+                return
+            case .denied:
+                presentAlert(title: "Access Denied", message: statusData.status.userFacingDescription)
+                return
+            case .deleted:
+                presentAlert(title: "File Deleted", message: statusData.status.userFacingDescription)
+                return
+            case .notFound:
+                presentAlert(title: "File Not Found", message: statusData.status.userFacingDescription)
+                return
+            }
+        }
+
+        // For outgoing messages, prefer the original file if it exists locally
+        if message.isFromCurrentSender,
+           let originalPath = originalFilePath(for: encryptedFilePath),
+           FileManager.default.fileExists(atPath: originalPath) {
+            let originalURL = URL(fileURLWithPath: originalPath)
+            openFilePreview(url: originalURL, suggestedName: strippedFileName(from: message.filename))
+            return
+        }
+
+        fileAccessStatusCache.removeValue(forKey: message.id)
+
+        let result = PrvContext.shared.requestFileDecryption(prvFile: encryptedFilePath, chatId: chatIdString)
+        guard result.success,
+              let data = result.data,
+              let decryptedPath = data["file_path"] as? String else {
+            let errorMessage = result.error ?? "File could not be decrypted."
+            logger.error("Privitty: Decryption failed - \(errorMessage)")
+            presentAlert(title: "Decryption Failed", message: errorMessage)
+            return
+        }
+
+        let decryptedURL = URL(fileURLWithPath: decryptedPath)
+        let fileName = (data["file_name"] as? String) ?? strippedFileName(from: message.filename)
+        openFilePreview(url: decryptedURL, suggestedName: fileName)
+    }
+
+    private func showFileAccessRequestDialog(for message: DcMsg, status: PrvContext.FileAccessStatusData) {
+        var messageComponents: [String] = ["Access to this secure file has expired."]
+        if let expiryDate = status.expiryDate {
+            messageComponents.append("Expired on \(privittyDateFormatter.string(from: expiryDate)).")
+        }
+        messageComponents.append("Would you like to request access from the owner?")
+
+        let alert = UIAlertController(title: "Request File Access",
+                                      message: messageComponents.joined(separator: "\n"),
+                                      preferredStyle: .alert)
+        alert.addAction(UIAlertAction(title: String.localized("cancel"), style: .cancel))
+        let requestTitle = localized("request_access", default: "Request Access")
+        alert.addAction(UIAlertAction(title: requestTitle, style: .default, handler: { [weak self] _ in
+            self?.requestFileAccess(for: message)
+        }))
+        present(alert, animated: true)
+    }
+
+    private func requestFileAccess(for message: DcMsg) {
+        guard let filePath = message.file else { return }
+
+        guard PrvContext.shared.switchProfile(for: dcContext) else {
+            logger.error("Privitty: Unable to align profile before requesting access")
+            presentAlert(title: "Error", message: "Unable to prepare secure channel.")
+            return
+        }
+
+        let chatIdString = String(message.chatId)
+        let result = PrvContext.shared.processInitAccessGrantRequest(chatId: chatIdString, filePath: filePath)
+
+        if result.success {
+            if let data = result.data,
+               let pdu = data["pdu"] as? String {
+                let requestMessage = dcContext.newMessage(viewType: DC_MSG_TEXT)
+                requestMessage.text = pdu
+                dcContext.sendMessage(chatId: message.chatId, message: requestMessage)
+            }
+
+            let info = result.message ?? "Access request sent."
+            presentAlert(title: "Request Sent", message: info)
+            fileAccessStatusCache.removeValue(forKey: message.id)
+            if let row = messageIds.firstIndex(of: message.id) {
+                let indexPath = IndexPath(row: row, section: 0)
+                tableView.reloadRows(at: [indexPath], with: .automatic)
+            }
+        } else {
+            let errorMessage = result.error ?? result.message ?? "Unknown error"
+            presentAlert(title: "Request Failed", message: errorMessage)
+        }
+    }
+
+    private func openFilePreview(url: URL, suggestedName: String?) {
+        DispatchQueue.main.async {
+            let previewController = PreviewController(dcContext: self.dcContext, type: .single(url))
+            previewController.customTitle = suggestedName
+            self.navigationController?.pushViewController(previewController, animated: true)
+        }
+    }
+
+    private func originalFilePath(for encryptedPath: String) -> String? {
+        guard encryptedPath.lowercased().hasSuffix(".prv") else { return encryptedPath }
+        let trimmed = String(encryptedPath.dropLast(4))
+        return trimmed.isEmpty ? nil : trimmed
+    }
+
+    private func strippedFileName(from fileName: String?) -> String? {
+        guard let fileName else { return nil }
+        if fileName.lowercased().hasSuffix(".prv") {
+            return String(fileName.dropLast(4))
+        }
+        return fileName
+    }
+
+    private func localized(_ key: String, default defaultValue: String) -> String {
+        let value = String.localized(key)
+        return value == key ? defaultValue : value
+    }
+
+    private func presentAlert(title: String, message: String) {
+        let alert = UIAlertController(title: title, message: message, preferredStyle: .alert)
+        alert.addAction(UIAlertAction(title: "OK", style: .default))
+        present(alert, animated: true)
+    }
+
+    private func privittyHandshakeText(for message: DcMsg) -> String? {
+        guard PrvContext.shared.isInitialized(),
+              message.type == DC_MSG_TEXT,
+              let text = message.text,
+              PrvContext.shared.isPrivittyMessage(text) else {
+            return nil
+        }
+
+        let chatMessageIds = dcContext.getChatMsgs(chatId: message.chatId, flags: 0)
+        var privittyCount = 0
+        for msgId in chatMessageIds {
+            if msgId <= 0 {
+                continue
+            }
+            if msgId > message.id {
+                continue
+            }
+            let candidate = dcContext.getMessage(id: msgId)
+            if let candidateText = candidate.text,
+               PrvContext.shared.isPrivittyMessage(candidateText) {
+                privittyCount += 1
+            }
+        }
+
+        switch privittyCount {
+        case 1:
+            return String.localized("privitty_handshake_message_start")
+        case 2:
+            return String.localized("privitty_handshake_message_ready")
+        default:
+            return nil
+        }
+    }
+
+    private func applyPrivittyFilter(to ids: [Int]) -> [Int] {
+#if canImport(Privitty)
+        guard PrvContext.shared.isInitialized() else { return ids }
+
+        var filteredIds: [Int] = []
+        var privittyCount = 0
+
+        for id in ids {
+            if id <= 0 {
+                filteredIds.append(id)
+                continue
+            }
+
+            let message = dcContext.getMessage(id: id)
+            guard message.type == DC_MSG_TEXT,
+                  let text = message.text,
+                  PrvContext.shared.isPrivittyMessage(text) else {
+                filteredIds.append(id)
+                continue
+            }
+
+            privittyCount += 1
+            if privittyCount <= 2 {
+                filteredIds.append(id)
+            }
+        }
+
+        return filteredIds
+#else
+        return ids
+#endif
     }
 }
 

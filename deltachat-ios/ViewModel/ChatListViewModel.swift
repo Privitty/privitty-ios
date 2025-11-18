@@ -346,16 +346,18 @@ class ChatListViewModel: NSObject {
             chatTitleIndexes = chatName.containsExact(subSequence: searchText)
         }
 
+        let chatData = ChatCellData(
+            chatId: chatId,
+            highlightMsgId: nil,
+            summary: summary,
+            unreadMessages: unreadMessages
+        )
         let viewModel = ChatCellViewModel(
             dcContext: dcContext,
-            chatData: ChatCellData(
-                chatId: chatId,
-                highlightMsgId: nil,
-                summary: summary,
-                unreadMessages: unreadMessages
-            ),
+            chatData: chatData,
             titleHighlightIndexes: chatTitleIndexes
         )
+        viewModel.subtitleOverride = privittyChatSubtitle(for: chatData, summary: summary)
         return viewModel
     }
 
@@ -379,16 +381,19 @@ class ChatListViewModel: NSObject {
         let summary: DcLot = msg.summary(chat: chat)
         let unreadMessages = dcContext.getUnreadMessages(chatId: chatId)
 
+        let chatData = ChatCellData(
+            chatId: chatId,
+            highlightMsgId: msgId,
+            summary: summary,
+            unreadMessages: unreadMessages
+        )
         let viewModel = ChatCellViewModel(
             dcContext: dcContext,
-            chatData: ChatCellData(
-                chatId: chatId,
-                highlightMsgId: msgId,
-                summary: summary,
-                unreadMessages: unreadMessages
-            )
+            chatData: chatData
         )
-        let subtitle = viewModel.subtitle
+        let overrideSubtitle = privittyChatSubtitle(for: chatData, summary: summary)
+        viewModel.subtitleOverride = overrideSubtitle
+        let subtitle = overrideSubtitle ?? viewModel.subtitle
         viewModel.subtitleHighlightIndexes = subtitle.containsExact(subSequence: searchText)
         return viewModel
     }
@@ -423,6 +428,103 @@ class ChatListViewModel: NSObject {
             resetSearch()
         }
         handleOnChatListUpdate()
+    }
+
+    private func privittyChatSubtitle(for chatData: ChatCellData, summary: DcLot) -> String? {
+#if canImport(Privitty)
+        guard PrvContext.shared.isInitialized() else { return nil }
+
+        let chat = dcContext.getChat(chatId: chatData.chatId)
+        // Limit placeholder to one-to-one chats only (exclude Device, Saved Messages, groups)
+        if chat.isDeviceTalk || chat.isSelfTalk || chat.isMultiUser {
+            return nil
+        }
+
+        // Always check the latest message first - this is the most reliable
+        let messageIds = dcContext.getChatMsgs(chatId: chatData.chatId, flags: 0)
+        if let lastMsgId = messageIds.last, lastMsgId > 0 {
+            let message = dcContext.getMessage(id: lastMsgId)
+            if message.type == DC_MSG_TEXT,
+               let text = message.text,
+               isPrivittyLike(text) {
+                return String.localized("privitty_message_placeholder")
+            }
+        }
+
+        // Also check the message from summary.id if different
+        if summary.id > 0 {
+            let message = dcContext.getMessage(id: summary.id)
+            if message.type == DC_MSG_TEXT,
+               let text = message.text,
+               isPrivittyLike(text) {
+                return String.localized("privitty_message_placeholder")
+            }
+        }
+
+        // Check combined summary text (this is what actually gets displayed)
+        let text1 = summary.text1 ?? ""
+        let text2 = summary.text2 ?? ""
+        let combinedText: String
+        if !text1.isEmpty && !text2.isEmpty {
+            combinedText = "\(text1): \(text2)"
+        } else {
+            combinedText = "\(text1)\(text2)"
+        }
+        if !combinedText.isEmpty && isPrivittyLike(combinedText) {
+            return String.localized("privitty_message_placeholder")
+        }
+
+        // Fallback: check individual summary text fields
+        if !text1.isEmpty && isPrivittyLike(text1) {
+            return String.localized("privitty_message_placeholder")
+        }
+
+        if !text2.isEmpty && isPrivittyLike(text2) {
+            return String.localized("privitty_message_placeholder")
+        }
+#endif
+        return nil
+    }
+
+    private func isPrivittyLike(_ text: String) -> Bool {
+#if canImport(Privitty)
+        if PrvContext.shared.isPrivittyMessage(text) {
+            return true
+        }
+#endif
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmed.count >= 16 else { return false }
+
+        // Check if it looks like encoded data (Privitty PDUs are Base64/hex-like)
+        // Allow alphanumeric, Base64 chars, and common encoding characters
+        let base64Chars = CharacterSet(charactersIn: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=")
+        let hexChars = CharacterSet(charactersIn: "0123456789ABCDEFabcdef")
+        
+        // Check if at least 75% of characters are alphanumeric/Base64 (allowing for some whitespace/punctuation)
+        let alphanumericCount = trimmed.unicodeScalars.filter { base64Chars.contains($0) || hexChars.contains($0) }.count
+        let totalCount = trimmed.unicodeScalars.count
+        guard totalCount > 0 else { return false }
+        
+        let ratio = Double(alphanumericCount) / Double(totalCount)
+        
+        // If it's mostly alphanumeric and long, it's likely encoded data
+        if ratio >= 0.75 {
+            return true
+        }
+        
+        // Also check if it starts with common Base64 prefixes or looks like protobuf
+        if trimmed.hasPrefix("Ch") || trimmed.hasPrefix("CA") || trimmed.count > 30 {
+            // Check if it has very few spaces or punctuation (typical of encoded data)
+            let punctuationCount = trimmed.unicodeScalars.filter { 
+                !base64Chars.contains($0) && !hexChars.contains($0) && !CharacterSet.whitespacesAndNewlines.contains($0)
+            }.count
+            let punctuationRatio = Double(punctuationCount) / Double(totalCount)
+            if punctuationRatio < 0.1 { // Less than 10% punctuation
+                return true
+            }
+        }
+        
+        return false
     }
 
     func filterAndUpdateList(searchText: String) {

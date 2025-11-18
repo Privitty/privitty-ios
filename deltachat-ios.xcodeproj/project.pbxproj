@@ -10,7 +10,8 @@
 		21D54500299415B9008B54D5 /* Character+Extentions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 21D544FF299415B9008B54D5 /* Character+Extentions.swift */; };
 		21D6C941260623F500D0755A /* NotificationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 21D6C9392606190600D0755A /* NotificationManager.swift */; };
 		2F11E3E62E9FABD900CA4BB4 /* PrvContext.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F11E3E52E9FABD900CA4BB4 /* PrvContext.swift */; };
-		2F437DF82E94F68900297EED /* Privitty.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 2F437DF72E94F68900297EED /* Privitty.framework */; };
+		2F2A09F22EC24FCC00A37097 /* Privitty.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 2F437DF72E94F68900297EED /* Privitty.framework */; };
+		2F2A09F32EC24FCC00A37097 /* Privitty.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 2F437DF72E94F68900297EED /* Privitty.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		3008CB7224F93EB900E6A617 /* AudioMessageCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3008CB7124F93EB900E6A617 /* AudioMessageCell.swift */; };
 		3008CB7424F9436C00E6A617 /* AudioPlayerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3008CB7324F9436C00E6A617 /* AudioPlayerView.swift */; };
 		3008CB7624F95B6D00E6A617 /* AudioController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3008CB7524F95B6D00E6A617 /* AudioController.swift */; };
@@ -291,6 +292,7 @@
 			dstSubfolderSpec = 10;
 			files = (
 				304219D3243F588500516852 /* DcCore.framework in Embed Frameworks */,
+				2F2A09F32EC24FCC00A37097 /* Privitty.framework in Embed Frameworks */,
 			);
 			name = "Embed Frameworks";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -717,7 +719,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				2F437DF82E94F68900297EED /* Privitty.framework in Frameworks */,
+				2F2A09F22EC24FCC00A37097 /* Privitty.framework in Frameworks */,
 				8A19190635E24C1DF7F0A35D /* Pods_deltachat_ios.framework in Frameworks */,
 				D89EC91A2D4BDEB800352298 /* PhotosUI.framework in Frameworks */,
 			);
@@ -2331,6 +2333,7 @@
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.5;
+				VALIDATE_WORKSPACE = NO;
 			};
 			name = Debug;
 		};
@@ -2391,6 +2394,7 @@
 				SWIFT_OPTIMIZATION_LEVEL = "-O";
 				SWIFT_VERSION = 5.5;
 				VALIDATE_PRODUCT = YES;
+				VALIDATE_WORKSPACE = NO;
 			};
 			name = Release;
 		};
@@ -2406,6 +2410,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				DEVELOPMENT_TEAM = 9WB6484ZRW;
 				ENABLE_BITCODE = NO;
+				"EXCLUDED_ARCHS[sdk=iphonesimulator*]" = arm64;
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(inherited)",
 					"$(PROJECT_DIR)",
@@ -2479,6 +2484,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				DEVELOPMENT_TEAM = 9WB6484ZRW;
 				ENABLE_BITCODE = NO;
+				"EXCLUDED_ARCHS[sdk=iphonesimulator*]" = arm64;
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(inherited)",
 					"$(PROJECT_DIR)",

@@ -309,7 +309,13 @@ class InstantOnboardingViewController: UIViewController {
 
         // Create/switch Privitty user profile.
         if let username = contentView?.nameTextField.text, !username.isEmpty {
-            let success = PrvContext.shared.createOrSwitchUser(username: username)
+            // Get user email from Delta Chat config (like Android Java code)
+            let selfEmail = dcContext.getConfig("configured_addr") ?? ""
+            
+            logger.info("Creating Privitty user: \(username)")
+            logger.debug("Email: \(selfEmail)")
+            
+            let success = PrvContext.shared.createOrSwitchUser(username: username, useremail: selfEmail, userid: "")
             if success {
                 logger.info("Privitty user created/switched successfully: \(username)")
             } else {
