@@ -1415,6 +1415,47 @@ class ChatViewController: UITableViewController, UITableViewDropDelegate {
         mediaPicker?.showFilesLibrary()
     }
 
+    /// Get peer identity (name and email) for 1:1 chats
+    /// Returns nil for group chats or if peer cannot be determined
+    private func getPeerIdentity() -> (name: String, email: String)? {
+        let chat = dcContext.getChat(chatId: chatId)
+        
+        // Only works for 1:1 chats
+        guard !chat.isMultiUser else {
+            logger.warning("getPeerIdentity: Cannot get peer identity for group chat")
+            return nil
+        }
+        
+        let contactIds = chat.getContactIds(dcContext)
+        
+        guard !contactIds.isEmpty else {
+            logger.warning("getPeerIdentity: No contacts found in chat \(chatId)")
+            return nil
+        }
+        
+        // Find the first contact that is NOT self
+        for contactId in contactIds {
+            if contactId == Int(DC_CONTACT_ID_SELF) {
+                continue // Skip my own entry
+            }
+            
+            let contact = dcContext.getContact(id: contactId)
+            let peerEmail = contact.email
+            
+            // Prefer authName over displayName (same as Android)
+            var peerName = contact.authName
+            if peerName.isEmpty {
+                peerName = contact.displayName
+            }
+            
+            logger.info("getPeerIdentity: Found peer - Name: \(peerName), Email: \(peerEmail), ID: \(contactId)")
+            return (name: peerName, email: peerEmail)
+        }
+        
+        logger.warning("getPeerIdentity: No peer contact found (only self in chat)")
+        return nil
+    }
+    
     private func sendPrivittyHandshake() {
         let chat = dcContext.getChat(chatId: chatId)
 
@@ -1433,16 +1474,31 @@ class ChatViewController: UITableViewController, UITableViewDropDelegate {
             return
         }
 
+        // Get peer identity (like Android implementation)
+        guard let peerIdentity = getPeerIdentity() else {
+            logger.error("Failed to get peer identity for chat \(chatId)")
+            let alert = UIAlertController(
+                title: "Error",
+                message: "Cannot identify chat participant. Please try again.",
+                preferredStyle: .alert
+            )
+            alert.addAction(UIAlertAction(title: "OK", style: .default))
+            present(alert, animated: true)
+            return
+        }
+        
         let chatIdString = String(chatId)
-        let userEmail = dcContext.getConfig("configured_addr") ?? ""
-        let userId = String(dcContext.getContact(id: Int(DC_CONTACT_ID_SELF)).id)
-        logger.debug("Handshake context - Email: \(userEmail), ID: \(userId)")
+        let peerName = peerIdentity.name
+        let peerEmail = peerIdentity.email
+        let peerId = "" // Empty string like Android (not used in current implementation)
+        
+        logger.info("Handshake context - Peer Name: \(peerName), Peer Email: \(peerEmail)")
 
         let result = PrvContext.shared.createPeerAddRequest(
             chatId: chatIdString,
-            peerName: chat.name,
-            peerEmail: userEmail,
-            peerId: userId
+            peerName: peerName,
+            peerEmail: peerEmail,
+            peerId: peerId
         )
 
         guard result.success, let pdu = result.pdu, !pdu.isEmpty else {

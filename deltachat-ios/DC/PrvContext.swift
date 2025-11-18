@@ -1,4 +1,5 @@
 import Foundation
+import UIKit
 import Privitty
 import DcCore
 
@@ -611,4 +612,210 @@ public class PrvContext {
         logger.error("File access request failed: \(errorMessage)")
         return (false, nil, message, errorMessage)
     }
+
+    // MARK: - DEBUG: Database Export
+    #if DEBUG
+    /// TEMPORARY DEBUG: Export only Privitty database files (excludes Delta Chat databases)
+    public func exportAllDatabases() {
+        logger.info("🔍 Starting Privitty database export (Delta Chat DBs excluded)...")
+        
+        let fileManager = FileManager.default
+        var allDatabases: [(name: String, url: URL, size: String)] = []
+        
+        // 1. Check App Group container
+        if let appGroupURL = fileManager.containerURL(forSecurityApplicationGroupIdentifier: "group.chat.privitty.ios") {
+            logger.info("📂 App Group: \(appGroupURL.path)")
+            
+            // Check for .privitty directory explicitly
+            let privittyDir = appGroupURL.appendingPathComponent(".privitty", isDirectory: true)
+            if fileManager.fileExists(atPath: privittyDir.path) {
+                logger.info("✅ Found .privitty directory: \(privittyDir.path)")
+                let dbDir = privittyDir.appendingPathComponent("dbase", isDirectory: true)
+                if fileManager.fileExists(atPath: dbDir.path) {
+                    logger.info("✅ Found .privitty/dbase directory: \(dbDir.path)")
+                    if let contents = try? fileManager.contentsOfDirectory(atPath: dbDir.path) {
+                        logger.info("📁 Contents: \(contents.joined(separator: ", "))")
+                    }
+                } else {
+                    logger.warning("⚠️ .privitty/dbase directory not found")
+                }
+            } else {
+                logger.warning("⚠️ .privitty directory not found at: \(privittyDir.path)")
+            }
+            
+            findDatabases(in: appGroupURL, into: &allDatabases)
+        } else {
+            logger.error("❌ Cannot access App Group")
+        }
+        
+        // 2. Check Documents
+        if let documentsURL = fileManager.urls(for: .documentDirectory, in: .userDomainMask).first {
+            logger.info("📄 Documents: \(documentsURL.path)")
+            findDatabases(in: documentsURL, into: &allDatabases)
+        }
+        
+        // 3. Check Application Support
+        if let appSupportURL = fileManager.urls(for: .applicationSupportDirectory, in: .userDomainMask).first {
+            logger.info("🛠️  App Support: \(appSupportURL.path)")
+            findDatabases(in: appSupportURL, into: &allDatabases)
+        }
+        
+        logger.info("========================================")
+        logger.info("💾 FOUND \(allDatabases.count) PRIVITTY DATABASE FILES:")
+        logger.info("(Delta Chat databases excluded)")
+        logger.info("========================================")
+        for db in allDatabases {
+            logger.info("📊 \(db.name) - \(db.size)")
+            logger.info("   \(db.url.path)")
+        }
+        logger.info("========================================")
+        
+        // Export to Documents for easy access
+        exportToDocuments(databases: allDatabases)
+    }
+    
+    private func findDatabases(in directory: URL, into results: inout [(name: String, url: URL, size: String)]) {
+        guard let enumerator = FileManager.default.enumerator(
+            at: directory,
+            includingPropertiesForKeys: [.isRegularFileKey, .fileSizeKey],
+            options: [] // Don't skip hidden files - we need .privitty directory!
+        ) else { return }
+        
+        for case let fileURL as URL in enumerator {
+            let fileName = fileURL.lastPathComponent.lowercased()
+            
+            // Check for database files and their related files (WAL, SHM)
+            let isDbFile = fileName.hasSuffix(".db") || 
+                          fileName.hasSuffix(".sqlite") || 
+                          fileName.hasSuffix(".sqlite3") ||
+                          fileName.hasSuffix(".db-wal") ||
+                          fileName.hasSuffix(".db-shm")
+            
+            if isDbFile {
+                // FILTER: Only include Privitty databases from .privitty directory
+                // Skip Delta Chat databases (accounts/*/db.sqlite)
+                if !fileURL.path.contains(".privitty") {
+                    continue // Skip non-Privitty databases
+                }
+                
+                // Check if file actually exists (skip broken symlinks or stale references)
+                guard FileManager.default.fileExists(atPath: fileURL.path) else {
+                    logger.warning("⚠️ Skipping non-existent file: \(fileURL.lastPathComponent)")
+                    continue
+                }
+                
+                // Verify it's a regular file (not directory or symlink)
+                var isDirectory: ObjCBool = false
+                guard FileManager.default.fileExists(atPath: fileURL.path, isDirectory: &isDirectory),
+                      !isDirectory.boolValue else {
+                    logger.warning("⚠️ Skipping directory or invalid file: \(fileURL.lastPathComponent)")
+                    continue
+                }
+                
+                let fileSize: String
+                if let attributes = try? FileManager.default.attributesOfItem(atPath: fileURL.path),
+                   let size = attributes[.size] as? UInt64 {
+                    fileSize = formatBytes(size)
+                } else {
+                    fileSize = "Unknown"
+                }
+                
+                let relativePath = fileURL.path.replacingOccurrences(of: directory.path + "/", with: "")
+                results.append((name: relativePath, url: fileURL, size: fileSize))
+            }
+        }
+    }
+    
+    private func formatBytes(_ bytes: UInt64) -> String {
+        if bytes < 1024 {
+            return "\(bytes) B"
+        } else if bytes < 1024 * 1024 {
+            return String(format: "%.2f KB", Double(bytes) / 1024)
+        } else {
+            return String(format: "%.2f MB", Double(bytes) / (1024 * 1024))
+        }
+    }
+    
+    private func exportToDocuments(databases: [(name: String, url: URL, size: String)]) {
+        let fileManager = FileManager.default
+        guard let documentsURL = fileManager.urls(for: .documentDirectory, in: .userDomainMask).first else {
+            logger.error("❌ Cannot access Documents")
+            return
+        }
+        
+        let timestamp = Int(Date().timeIntervalSince1970)
+        let exportFolder = documentsURL.appendingPathComponent("PrivittyDatabases_\(timestamp)", isDirectory: true)
+        
+        do {
+            try fileManager.createDirectory(at: exportFolder, withIntermediateDirectories: true)
+            
+            var successCount = 0
+            var failCount = 0
+            
+            for db in databases {
+                // Use just the filename, not the full relative path (avoids path issues)
+                let fileName = db.url.lastPathComponent
+                let destURL = exportFolder.appendingPathComponent(fileName)
+                
+                do {
+                    // Remove existing file if present
+                    try? fileManager.removeItem(at: destURL)
+                    
+                    // Verify source exists before copying
+                    guard fileManager.fileExists(atPath: db.url.path) else {
+                        logger.warning("⚠️ Source file doesn't exist: \(fileName)")
+                        failCount += 1
+                        continue
+                    }
+                    
+                    // Copy the file
+                    try fileManager.copyItem(at: db.url, to: destURL)
+                    logger.info("✅ Copied: \(fileName) (\(db.size))")
+                    successCount += 1
+                    
+                } catch {
+                    logger.error("❌ Failed to copy \(fileName): \(error.localizedDescription)")
+                    failCount += 1
+                }
+            }
+            
+            logger.info("========================================")
+            logger.info("✅ PRIVITTY DATABASES EXPORTED TO:")
+            logger.info("\(exportFolder.path)")
+            logger.info("📊 Success: \(successCount), Failed: \(failCount)")
+            logger.info("📱 Access via Files app → On My iPhone → chat.privitty")
+            logger.info("========================================")
+            
+            if successCount > 0 {
+                DispatchQueue.main.async {
+                    self.presentShareSheet(for: exportFolder)
+                }
+            } else {
+                logger.error("❌ No databases were exported successfully")
+            }
+            
+        } catch {
+            logger.error("❌ Export failed: \(error)")
+        }
+    }
+    
+    private func presentShareSheet(for url: URL) {
+        guard let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+              let window = windowScene.windows.first,
+              let rootVC = window.rootViewController else {
+            logger.error("❌ Cannot present share sheet")
+            return
+        }
+        
+        let activityVC = UIActivityViewController(activityItems: [url], applicationActivities: nil)
+        
+        if let popover = activityVC.popoverPresentationController {
+            popover.sourceView = rootVC.view
+            popover.sourceRect = CGRect(x: rootVC.view.bounds.midX, y: rootVC.view.bounds.midY, width: 0, height: 0)
+            popover.permittedArrowDirections = []
+        }
+        
+        rootVC.present(activityVC, animated: true)
+    }
+    #endif
 }

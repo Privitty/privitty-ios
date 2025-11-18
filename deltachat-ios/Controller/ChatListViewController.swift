@@ -84,6 +84,14 @@ class ChatListViewController: UITableViewController {
         return UIBarButtonItem(customView: accountButtonAvatar)
     }()
 
+    #if DEBUG
+    private lazy var exportDbButton: UIBarButtonItem = {
+        let button = UIBarButtonItem(title: "📊 DB", style: .plain, target: self, action: #selector(exportDatabaseButtonTapped))
+        button.tintColor = DcColors.primary
+        return button
+    }()
+    #endif
+
     private var editingConstraints: [NSLayoutConstraint]?
 
     init(dcContext: DcContext, dcAccounts: DcAccounts, isArchive: Bool) {
@@ -734,6 +742,13 @@ class ChatListViewController: UITableViewController {
         self.present(accountSwitchNavigationController, animated: true)
     }
 
+    #if DEBUG
+    @objc private func exportDatabaseButtonTapped() {
+        logger.info("📊 Export Database button tapped")
+        PrvContext.shared.exportAllDatabases()
+    }
+    #endif
+
     // MARK: updates
     private func updateTitleAndEditingBar() {
         updateTitle()
@@ -765,10 +780,18 @@ class ChatListViewController: UITableViewController {
                 updateAccountButton()
 
                 if dcContext.getProxies().isEmpty {
+                    #if DEBUG
+                    navigationItem.setRightBarButtonItems([newButton, exportDbButton], animated: true)
+                    #else
                     navigationItem.setRightBarButtonItems([newButton], animated: true)
+                    #endif
                 } else {
                     updateProxyButton()
+                    #if DEBUG
+                    navigationItem.setRightBarButtonItems([newButton, proxyShieldButton, exportDbButton], animated: true)
+                    #else
                     navigationItem.setRightBarButtonItems([newButton, proxyShieldButton], animated: true)
+                    #endif
                 }
 
                 if dcContext.getConnectivity() >= DC_CONNECTIVITY_CONNECTED {
