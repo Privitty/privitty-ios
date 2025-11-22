@@ -16,7 +16,7 @@ public struct DcColors {
     public static let defaultTransparentBackgroundColor = DcColors.defaultBackgroundColor.withAlphaComponent(0.5)
     public static let defaultInverseColor = UIColor.themeColor(light: .black, dark: .white)
     public static let profileCellBackgroundColor = UIColor.themeColor(light: white, dark: actionCellBackgroundDark)
-    public static let chatBackgroundColor = UIColor.themeColor(light: .white, dark: .black)
+    public static let chatBackgroundColor = UIColor.themeColor(light: UIColor.init(hexString: "F8F5FF"), dark: .black)
     public static let checkmarkGreen = UIColor.themeColor(light: UIColor.rgb(red: 112, green: 177, blue: 92))
     public static let recentlySeenDot = UIColor(hexString: "34c759")
     public static let unreadBadge = UIColor(hexString: "3792fc")
@@ -62,4 +62,21 @@ public struct DcColors {
     public static let settingScreenBackgroundColor = UIColor.themeColor(light: UIColor.init(hexString: "E7E7E7"), dark: UIColor.init(hexString: "1C1C1E"))
     public static let switchOffStateColor = UIColor.init(hexString: "D1D1D1")
     public static let switchOnOffStateColor = UIColor.themeColor(light: UIColor.init(hexString: "B0B0B0"), dark: .white)
+    
+    // MARK: - File Access Status Colors (Privitty)
+    // Requesting Access / Granted (pending or active)
+    public static let fileAccessInnerPurple = UIColor.init(hexString: "7F66C5")
+    public static let fileAccessOuterGray = UIColor.init(hexString: "E7E7E7")
+    
+    // Request Denied
+    public static let fileAccessInnerRed = UIColor.init(hexString: "D93229")
+    public static let fileAccessOuterLightRed = UIColor.init(hexString: "FEE4E2")
+    
+    // Access Revoked
+    public static let fileAccessInnerOrange = UIColor.init(hexString: "C4891B")
+    public static let fileAccessOuterYellow = UIColor.init(hexString: "FDFCED")
+    
+    // Access Expired
+    public static let fileAccessInnerDarkGray = UIColor.init(hexString: "B0B0B0")
+    public static let fileAccessOuterLightGray = UIColor.init(hexString: "D1D1D1")
 }

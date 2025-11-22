@@ -611,6 +611,13 @@ class ChatViewController: UITableViewController, UITableViewDropDelegate {
 
         cell.baseDelegate = self
         cell.showSelectionBackground(tableView.isEditing)
+        
+        // IMPORTANT: Apply file access status BEFORE update() so StatusView gets the correct icon
+        if let fileCell = cell as? FileTextCell {
+            let status = fetchFileAccessStatus(for: message)
+            fileCell.applyFileAccessStatus(status, message: message)
+        }
+        
         cell.update(dcContext: dcContext,
                     msg: message,
                     messageStyle: configureMessageStyle(for: message, at: indexPath),
@@ -618,11 +625,6 @@ class ChatViewController: UITableViewController, UITableViewDropDelegate {
                     showName: showName,
                     searchText: searchController.searchBar.text,
                     highlight: !searchMessageIds.isEmpty && message.id == searchMessageIds[searchResultIndex])
-
-        if let fileCell = cell as? FileTextCell {
-            let status = fetchFileAccessStatus(for: message)
-            fileCell.applyFileAccessStatus(status, message: message)
-        }
 
         return cell
     }
@@ -784,7 +786,10 @@ class ChatViewController: UITableViewController, UITableViewDropDelegate {
         let messageId = messageIds[indexPath.row]
         let message = dcContext.getMessage(id: messageId)
         switch (message.type, message.infoType) {
-        case (DC_MSG_FILE, _), (DC_MSG_AUDIO, _), (DC_MSG_VOICE, _):
+        case (DC_MSG_FILE, _):
+            // Handle files properly (including encrypted .prv files)
+            handleFileTapped(message: message)
+        case (DC_MSG_AUDIO, _), (DC_MSG_VOICE, _):
             showMediaGalleryFor(message: message)
         case (DC_MSG_VIDEOCHAT_INVITATION, _):
             if let url = NSURL(string: message.getVideoChatUrl()) {
@@ -820,7 +825,9 @@ class ChatViewController: UITableViewController, UITableViewDropDelegate {
     override func traitCollectionDidChange(_ previousTraitCollection: UITraitCollection?) {
         messageInputBar.inputTextView.layer.borderColor = DcColors.colorDisabled.cgColor
         if UserDefaults.standard.string(forKey: Constants.Keys.backgroundImageName) == nil {
-            backgroundContainer.image = UIImage(named: traitCollection.userInterfaceStyle == .light ? "background_light" : "background_dark")
+            // Update background color for theme change
+            backgroundContainer.image = nil
+            backgroundContainer.backgroundColor = DcColors.chatBackgroundColor
         }
     }
 
@@ -1415,6 +1422,47 @@ class ChatViewController: UITableViewController, UITableViewDropDelegate {
         mediaPicker?.showFilesLibrary()
     }
 
+    /// Get peer identity (name and email) for 1:1 chats
+    /// Returns nil for group chats or if peer cannot be determined
+    private func getPeerIdentity() -> (name: String, email: String)? {
+        let chat = dcContext.getChat(chatId: chatId)
+        
+        // Only works for 1:1 chats
+        guard !chat.isMultiUser else {
+            logger.warning("getPeerIdentity: Cannot get peer identity for group chat")
+            return nil
+        }
+        
+        let contactIds = chat.getContactIds(dcContext)
+        
+        guard !contactIds.isEmpty else {
+            logger.warning("getPeerIdentity: No contacts found in chat \(chatId)")
+            return nil
+        }
+        
+        // Find the first contact that is NOT self
+        for contactId in contactIds {
+            if contactId == Int(DC_CONTACT_ID_SELF) {
+                continue // Skip my own entry
+            }
+            
+            let contact = dcContext.getContact(id: contactId)
+            let peerEmail = contact.email
+            
+            // Prefer authName over displayName (same as Android)
+            var peerName = contact.authName
+            if peerName.isEmpty {
+                peerName = contact.displayName
+            }
+            
+            logger.info("getPeerIdentity: Found peer - Name: \(peerName), Email: \(peerEmail), ID: \(contactId)")
+            return (name: peerName, email: peerEmail)
+        }
+        
+        logger.warning("getPeerIdentity: No peer contact found (only self in chat)")
+        return nil
+    }
+    
     private func sendPrivittyHandshake() {
         let chat = dcContext.getChat(chatId: chatId)
 
@@ -1433,16 +1481,31 @@ class ChatViewController: UITableViewController, UITableViewDropDelegate {
             return
         }
 
+        // Get peer identity (like Android implementation)
+        guard let peerIdentity = getPeerIdentity() else {
+            logger.error("Failed to get peer identity for chat \(chatId)")
+            let alert = UIAlertController(
+                title: "Error",
+                message: "Cannot identify chat participant. Please try again.",
+                preferredStyle: .alert
+            )
+            alert.addAction(UIAlertAction(title: "OK", style: .default))
+            present(alert, animated: true)
+            return
+        }
+        
         let chatIdString = String(chatId)
-        let userEmail = dcContext.getConfig("configured_addr") ?? ""
-        let userId = String(dcContext.getContact(id: Int(DC_CONTACT_ID_SELF)).id)
-        logger.debug("Handshake context - Email: \(userEmail), ID: \(userId)")
+        let peerName = peerIdentity.name
+        let peerEmail = peerIdentity.email
+        let peerId = "" // Empty string like Android (not used in current implementation)
+        
+        logger.info("Handshake context - Peer Name: \(peerName), Peer Email: \(peerEmail)")
 
         let result = PrvContext.shared.createPeerAddRequest(
             chatId: chatIdString,
-            peerName: chat.name,
-            peerEmail: userEmail,
-            peerId: userId
+            peerName: peerName,
+            peerEmail: peerEmail,
+            peerId: peerId
         )
 
         guard result.success, let pdu = result.pdu, !pdu.isEmpty else {
@@ -2532,7 +2595,9 @@ extension ChatViewController {
     }
 
     private func setDefaultBackgroundImage(view: UIImageView) {
-        view.image = UIImage(named: traitCollection.userInterfaceStyle == .light ? "background_light" : "background_dark")
+        // Use solid color background from DcColors instead of image
+        view.image = nil
+        view.backgroundColor = DcColors.chatBackgroundColor
     }
 
     private func copyTextToClipboard(ids: [Int]) {

@@ -201,6 +201,9 @@ public class BaseMessageCell: UITableViewCell {
     private var dcMsgId: Int?
     var a11yDcType: String?
     var overrideMessageText: String?
+    
+    // Privitty file access status (for file messages)
+    internal var fileAccessStatus: PrvContext.FileAccessStatus?
 
     override init(style: UITableViewCell.CellStyle, reuseIdentifier: String?) {
 
@@ -495,7 +498,7 @@ public class BaseMessageCell: UITableViewCell {
                 tintColor = DcColors.infoMessageColor
             }
 
-            statusView.update(message: msg, tintColor: tintColor)
+            statusView.update(message: msg, tintColor: tintColor, fileAccessStatus: fileAccessStatus)
             let timer = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { [weak self] _ in
                 guard let self else { return }
 
