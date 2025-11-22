@@ -123,7 +123,7 @@ class ChatListViewController: UITableViewController {
         //   navigationController?.navigationBar.scrollEdgeAppearance = navigationController?.navigationBar.standardAppearance
         // in ChatViewController.swift - removing this, the color is preserved at the cost of more flickering ...
         // this needs more love :)
-        self.view.backgroundColor = UIColor.systemBackground
+        self.view.backgroundColor = DcColors.chatBackgroundColor
 
         NotificationCenter.default.addObserver(self, selector: #selector(ChatListViewController.handleIncomingMessageOnAnyAccount(_:)), name: Event.incomingMessageOnAnyAccount, object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(ChatListViewController.handleIncomingMessage(_:)), name: Event.incomingMessage, object: nil)
@@ -404,6 +404,8 @@ class ChatListViewController: UITableViewController {
             traitCollection.preferredContentSizeCategory {
             tableView.rowHeight = ContactCell.cellHeight
         }
+        // Update background color for theme changes
+        self.view.backgroundColor = DcColors.chatBackgroundColor
     }
 
     func quitSearch(animated: Bool) {

@@ -8,12 +8,6 @@ class WelcomeViewController: UIViewController {
     private var backupProgressObserver: NSObjectProtocol?
     private var securityScopedResource: NSURL?
 
-    private lazy var scrollView: UIScrollView = {
-        let scrollView = UIScrollView()
-        scrollView.showsVerticalScrollIndicator = false
-        return scrollView
-    }()
-
     var progressAlertHandler: ProgressAlertHandler
 
     private lazy var welcomeView: WelcomeContentView = {
@@ -73,24 +67,39 @@ class WelcomeViewController: UIViewController {
     // MARK: - lifecycle
     override func viewDidLoad() {
         super.viewDidLoad()
-        view.backgroundColor =  DcColors.privittyThemeColor
+        view.backgroundColor = DcColors.privittyThemeColor
+        
+        // Hide navigation bar for full-screen design
+        navigationController?.setNavigationBarHidden(true, animated: false)
+        
         setupSubviews()
-        if canCancel {
-            navigationItem.leftBarButtonItem = cancelButton
-        }
         if let accountCode {
             handleQrCode(accountCode)
         }
     }
+    
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        navigationController?.setNavigationBarHidden(true, animated: animated)
+    }
+    
+    override func viewWillDisappear(_ animated: Bool) {
+        super.viewWillDisappear(animated)
+        navigationController?.setNavigationBarHidden(false, animated: animated)
+    }
+    
+    override var preferredStatusBarStyle: UIStatusBarStyle {
+        return .lightContent
+    }
 
     override func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
-        welcomeView.minContainerHeight = view.frame.height - view.safeAreaInsets.top
+        welcomeView.minContainerHeight = view.frame.height
     }
 
     override func viewWillTransition(to size: CGSize, with coordinator: UIViewControllerTransitionCoordinator) {
         super.viewWillTransition(to: size, with: coordinator)
-        welcomeView.minContainerHeight = size.height - view.safeAreaInsets.top
+        welcomeView.minContainerHeight = size.height
      }
 
     private func removeBackupProgressObserver() {
@@ -101,26 +110,16 @@ class WelcomeViewController: UIViewController {
 
     // MARK: - setup
     private func setupSubviews() {
-
-        view.addSubview(scrollView)
-        scrollView.translatesAutoresizingMaskIntoConstraints = false
-        scrollView.addSubview(welcomeView)
-
-        let frameGuide = scrollView.frameLayoutGuide
-        let contentGuide = scrollView.contentLayoutGuide
-
-        frameGuide.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 0).isActive = true
-        frameGuide.topAnchor.constraint(equalTo: view.topAnchor, constant: 0).isActive = true
-        frameGuide.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: 0).isActive = true
-        frameGuide.bottomAnchor.constraint(equalTo: view.bottomAnchor, constant: 0).isActive = true
-
-        contentGuide.leadingAnchor.constraint(equalTo: welcomeView.leadingAnchor).isActive = true
-        contentGuide.topAnchor.constraint(equalTo: welcomeView.topAnchor).isActive = true
-        contentGuide.trailingAnchor.constraint(equalTo: welcomeView.trailingAnchor).isActive = true
-        contentGuide.bottomAnchor.constraint(equalTo: welcomeView.bottomAnchor).isActive = true
-
-        // this enables vertical scrolling
-        frameGuide.widthAnchor.constraint(equalTo: contentGuide.widthAnchor).isActive = true
+        // Add welcome view directly to fill entire screen
+        view.addSubview(welcomeView)
+        welcomeView.translatesAutoresizingMaskIntoConstraints = false
+        
+        NSLayoutConstraint.activate([
+            welcomeView.topAnchor.constraint(equalTo: view.topAnchor),
+            welcomeView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            welcomeView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            welcomeView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
+        ])
     }
 
     // MARK: - actions
@@ -324,69 +323,150 @@ class WelcomeContentView: UIView {
 
     var minContainerHeight: CGFloat = 0 {
         didSet {
-            containerMinHeightConstraint.constant = minContainerHeight
-            logoHeightConstraint.constant = calculateLogoHeight()
+            bottomSheetHeightConstraint?.constant = max(minContainerHeight * 0.59, 539) // Figma: 539px height
         }
     }
 
-    private lazy var containerMinHeightConstraint: NSLayoutConstraint = {
-        return container.heightAnchor.constraint(greaterThanOrEqualToConstant: 0)
+    private var bottomSheetHeightConstraint: NSLayoutConstraint?
+    
+    // MARK: - Top Section (Purple Background with Logo)
+    private lazy var topSection: UIView = {
+        let view = UIView()
+        view.backgroundColor = DcColors.privittyThemeColor
+        view.translatesAutoresizingMaskIntoConstraints = false
+        return view
     }()
-
-    private lazy var logoHeightConstraint: NSLayoutConstraint = {
-        return logoView.heightAnchor.constraint(equalToConstant: 0)
+    
+    private lazy var logoView: UIImageView = {
+        let imageView = UIImageView(image: UIImage(named: "privitty_logo_without_title"))
+        imageView.contentMode = .scaleAspectFit
+        imageView.translatesAutoresizingMaskIntoConstraints = false
+        return imageView
     }()
-
-    private var container = UIView()
-    private var logoView = UIImageView(image: UIImage(named: "privitty_logo_without_title"))
-
-    private lazy var titleLabel: UILabel = {
+    
+    // MARK: - Bottom Sheet (Light Violet with Rounded Top Corners)
+    private lazy var bottomSheet: UIView = {
+        let view = UIView()
+        view.backgroundColor = UIColor(hexString: "F8F5FF") // Figma: #F8F5FF
+        view.layer.cornerRadius = 32 // Figma: 32px
+        view.layer.maskedCorners = [.layerMinXMinYCorner, .layerMaxXMinYCorner]
+        view.layer.shadowColor = UIColor.black.cgColor
+        view.layer.shadowOffset = CGSize(width: 0, height: -2)
+        view.layer.shadowRadius = 10
+        view.layer.shadowOpacity = 0.1
+        view.translatesAutoresizingMaskIntoConstraints = false
+        return view
+    }()
+    
+    // MARK: - Ellipse Ring (Behind headline)
+    private lazy var ellipseRingView: UIView = {
+        let view = UIView()
+        view.backgroundColor = .clear
+        view.layer.borderColor = UIColor(hexString: "D2D2F3").cgColor // Figma: #D2D2F3
+        view.layer.borderWidth = 2.0
+        view.translatesAutoresizingMaskIntoConstraints = false
+        return view
+    }()
+    
+    // MARK: - Welcome Headline (ONE line with two colors)
+    private lazy var welcomeHeadlineLabel: UILabel = {
         let label = UILabel()
-        label.text = String.localized("welcome_chat_over_email")
-        label.textColor = DcColors.grayTextColor
-        label.textAlignment = .center
         label.numberOfLines = 0
-        label.font = UIFont.preferredFont(forTextStyle: .title1)
+        label.textAlignment = .center
+        label.translatesAutoresizingMaskIntoConstraints = false
+        
+        // Create attributed string: "Welcome to Privitty"
+        let fullText = "Welcome to Privitty"
+        let attributedString = NSMutableAttributedString(string: fullText)
+        
+        // Paragraph style with line height 52pt
+        let paragraphStyle = NSMutableParagraphStyle()
+        paragraphStyle.alignment = .center
+        paragraphStyle.minimumLineHeight = 52
+        paragraphStyle.maximumLineHeight = 52
+        
+        // "Welcome to " in #020202
+        let welcomeRange = (fullText as NSString).range(of: "Welcome to ")
+        attributedString.addAttributes([
+            .font: UIFont.systemFont(ofSize: 45, weight: .medium),
+            .foregroundColor: UIColor(hexString: "020202"),
+            .paragraphStyle: paragraphStyle
+        ], range: welcomeRange)
+        
+        // "Privitty" in #6750A4
+        let privittyRange = (fullText as NSString).range(of: "Privitty")
+        attributedString.addAttributes([
+            .font: UIFont.systemFont(ofSize: 45, weight: .medium),
+            .foregroundColor: UIColor(hexString: "6750A4"),
+            .paragraphStyle: paragraphStyle
+        ], range: privittyRange)
+        
+        label.attributedText = attributedString
         return label
     }()
-
-    private lazy var buttonStack: UIStackView = {
-        let stack = UIStackView(arrangedSubviews: [signUpButton, logInButton])
-        stack.axis = .vertical
-        stack.spacing = 15
-        return stack
+    
+    // MARK: - Description Text
+    private lazy var descriptionLabel: UILabel = {
+        let label = UILabel()
+        label.numberOfLines = 0
+        label.textAlignment = .center
+        label.translatesAutoresizingMaskIntoConstraints = false
+        
+        let text = "Privitty is a secure, decentralized messaging app with advanced privacy features like message revocation and time-limited access."
+        
+        // Paragraph style with line height 24pt
+        let paragraphStyle = NSMutableParagraphStyle()
+        paragraphStyle.alignment = .center
+        paragraphStyle.lineSpacing = 0
+        paragraphStyle.minimumLineHeight = 24
+        paragraphStyle.maximumLineHeight = 24
+        
+        label.attributedText = NSAttributedString(
+            string: text,
+            attributes: [
+                .font: UIFont.systemFont(ofSize: 16, weight: .regular),
+                .foregroundColor: UIColor(hexString: "4F4F4F"), // Figma: #4F4F4F
+                .paragraphStyle: paragraphStyle
+            ]
+        )
+        return label
     }()
-
+    
+    // MARK: - Buttons
     private lazy var signUpButton: UIButton = {
-        let button = UIButton(type: .roundedRect)
+        let button = UIButton(type: .system)
         let title = String.localized("onboarding_create_instant_account")
         button.setTitle(title, for: .normal)
-        button.titleLabel?.font = UIFont.preferredFont(forTextStyle: .body)
-        button.setTitleColor(.white, for: .normal)
-        button.backgroundColor = DcColors.privittyButtonsBackgroundColor
-        button.contentEdgeInsets = UIEdgeInsets(top: 8, left: 15, bottom: 8, right: 15)
-        button.layer.cornerRadius = 5
+        button.titleLabel?.font = UIFont.systemFont(ofSize: 16, weight: .medium)
+        button.setTitleColor(UIColor(hexString: "F6F6F6"), for: .normal) // White
+        button.backgroundColor = UIColor(hexString: "6750A4") // Figma: #6750A4
+        button.layer.cornerRadius = 30 // Height 60 / 2 = fully rounded
         button.clipsToBounds = true
         button.addTarget(self, action: #selector(signUpButtonPressed(_:)), for: .touchUpInside)
+        button.translatesAutoresizingMaskIntoConstraints = false
         return button
     }()
 
     private lazy var logInButton: UIButton = {
-        let button = UIButton()
+        let button = UIButton(type: .system)
         let title = String.localized("onboarding_alternative_logins")
-        button.setTitleColor(DcColors.privittyButtonsTextBlackColor, for: .normal)
         button.setTitle(title, for: .normal)
-        button.titleLabel?.font = UIFont.preferredFont(forTextStyle: .body)
+        button.titleLabel?.font = UIFont.systemFont(ofSize: 16, weight: .medium)
+        button.setTitleColor(UIColor(hexString: "020202"), for: .normal) // Black
+        button.backgroundColor = UIColor(hexString: "F8F5FF") // Match bottom sheet
+        button.layer.cornerRadius = 30
+        button.layer.borderWidth = 1.0
+        button.layer.borderColor = UIColor(hexString: "6750A4").cgColor // Purple border
+        button.clipsToBounds = true
         button.addTarget(self, action: #selector(logInButtonPressed(_:)), for: .touchUpInside)
+        button.translatesAutoresizingMaskIntoConstraints = false
         return button
     }()
-
-    private let defaultSpacing: CGFloat = 20
 
     init() {
         super.init(frame: .zero)
         setupSubviews()
-        backgroundColor = DcColors.defaultBackgroundColor
+        backgroundColor = DcColors.privittyThemeColor
     }
 
     required init?(coder: NSCoder) {
@@ -395,69 +475,91 @@ class WelcomeContentView: UIView {
 
     // MARK: - setup
     private func setupSubviews() {
-        addSubview(container)
-        container.translatesAutoresizingMaskIntoConstraints = false
-
-        container.topAnchor.constraint(equalTo: topAnchor).isActive = true
-        container.bottomAnchor.constraint(equalTo: bottomAnchor).isActive = true
-        container.widthAnchor.constraint(equalTo: widthAnchor, multiplier: 0.75).isActive = true
-        container.centerXAnchor.constraint(equalTo: centerXAnchor, constant: 0).isActive = true
-
-        containerMinHeightConstraint.isActive = true
-
-        _ = [logoView, titleLabel].map {
-            addSubview($0)
-            $0.translatesAutoresizingMaskIntoConstraints = false
-        }
-
-        let bottomLayoutGuide = UILayoutGuide()
-        container.addLayoutGuide(bottomLayoutGuide)
-        bottomLayoutGuide.bottomAnchor.constraint(equalTo: container.bottomAnchor).isActive = true
-        bottomLayoutGuide.heightAnchor.constraint(equalTo: container.heightAnchor, multiplier: 0.45).isActive = true
-
-        titleLabel.leadingAnchor.constraint(equalTo: container.leadingAnchor).isActive = true
-        titleLabel.trailingAnchor.constraint(equalTo: container.trailingAnchor).isActive = true
-        titleLabel.topAnchor.constraint(equalTo: bottomLayoutGuide.topAnchor).isActive = true
-        titleLabel.setContentHuggingPriority(.defaultHigh, for: .vertical)
-
-        logoView.bottomAnchor.constraint(equalTo: titleLabel.topAnchor, constant: -defaultSpacing).isActive = true
-        logoView.centerXAnchor.constraint(equalTo: container.centerXAnchor).isActive = true
-        logoHeightConstraint.constant = calculateLogoHeight()
-        logoHeightConstraint.isActive = true
-        logoView.widthAnchor.constraint(equalTo: logoView.heightAnchor).isActive = true
-
-        let logoTopAnchor = logoView.topAnchor.constraint(equalTo: container.topAnchor, constant: 20)   // this will allow the container to grow in height
-        logoTopAnchor.priority = .defaultLow
-        logoTopAnchor.isActive = true
-
-        let buttonContainerGuide = UILayoutGuide()
-        container.addLayoutGuide(buttonContainerGuide)
-        buttonContainerGuide.topAnchor.constraint(equalTo: titleLabel.bottomAnchor).isActive = true
-        buttonContainerGuide.bottomAnchor.constraint(equalTo: container.bottomAnchor).isActive = true
-
-        signUpButton.setContentHuggingPriority(.defaultHigh, for: .vertical)
-
-        container.addSubview(buttonStack)
-        buttonStack.translatesAutoresizingMaskIntoConstraints = false
-        buttonStack.centerXAnchor.constraint(equalTo: container.centerXAnchor).isActive = true
-        buttonStack.centerYAnchor.constraint(equalTo: buttonContainerGuide.centerYAnchor).isActive = true
-
-        let buttonStackTopAnchor = buttonStack.topAnchor.constraint(equalTo: buttonContainerGuide.topAnchor, constant: defaultSpacing)
-        // this will allow the container to grow in height
-        let buttonStackBottomAnchor = buttonStack.bottomAnchor.constraint(equalTo: buttonContainerGuide.bottomAnchor, constant: -50)
-
-        _ = [buttonStackTopAnchor, buttonStackBottomAnchor].map {
-            $0.priority = .defaultLow
-            $0.isActive = true
-        }
+        // Add top section with logo
+        addSubview(topSection)
+        topSection.addSubview(logoView)
+        
+        // Add bottom sheet
+        addSubview(bottomSheet)
+        
+        // Add ellipse ring (will be positioned behind headline)
+        bottomSheet.addSubview(ellipseRingView)
+        
+        // Add content to bottom sheet
+        bottomSheet.addSubview(welcomeHeadlineLabel)
+        bottomSheet.addSubview(descriptionLabel)
+        bottomSheet.addSubview(signUpButton)
+        bottomSheet.addSubview(logInButton)
+        
+        setupConstraints()
     }
-
-    private func calculateLogoHeight() -> CGFloat {
-        if UIDevice.current.userInterfaceIdiom == .phone, let orientation = UIApplication.shared.orientation {
-            return orientation.isLandscape ? UIScreen.main.bounds.height * 0.5 : UIScreen.main.bounds.width * 0.5
-        } else {
-            return 275
-        }
+    
+    private func setupConstraints() {
+        // Top Section
+        NSLayoutConstraint.activate([
+            topSection.topAnchor.constraint(equalTo: topAnchor),
+            topSection.leadingAnchor.constraint(equalTo: leadingAnchor),
+            topSection.trailingAnchor.constraint(equalTo: trailingAnchor),
+            topSection.bottomAnchor.constraint(equalTo: bottomSheet.topAnchor, constant: 20),
+            
+            // Logo centered in top section
+            logoView.centerXAnchor.constraint(equalTo: topSection.centerXAnchor),
+            logoView.centerYAnchor.constraint(equalTo: topSection.centerYAnchor),
+            logoView.widthAnchor.constraint(equalToConstant: 170),
+            logoView.heightAnchor.constraint(equalToConstant: 170)
+        ])
+        
+        // Bottom Sheet
+        bottomSheetHeightConstraint = bottomSheet.heightAnchor.constraint(equalToConstant: 539)
+        NSLayoutConstraint.activate([
+            bottomSheet.leadingAnchor.constraint(equalTo: leadingAnchor),
+            trailingAnchor.constraint(equalTo: bottomSheet.trailingAnchor),
+            bottomSheet.bottomAnchor.constraint(equalTo: bottomAnchor),
+            bottomSheetHeightConstraint!
+        ])
+        
+        // Ellipse Ring (behind headline, positioned absolutely)
+        NSLayoutConstraint.activate([
+            ellipseRingView.centerXAnchor.constraint(equalTo: bottomSheet.centerXAnchor),
+            ellipseRingView.topAnchor.constraint(equalTo: welcomeHeadlineLabel.topAnchor, constant: -8),
+            ellipseRingView.widthAnchor.constraint(equalToConstant: 274),
+            ellipseRingView.heightAnchor.constraint(equalToConstant: 67)
+        ])
+        
+        // Welcome Headline
+        NSLayoutConstraint.activate([
+            welcomeHeadlineLabel.topAnchor.constraint(equalTo: bottomSheet.topAnchor, constant: 42),
+            welcomeHeadlineLabel.leadingAnchor.constraint(equalTo: bottomSheet.leadingAnchor, constant: 16),
+            bottomSheet.trailingAnchor.constraint(equalTo: welcomeHeadlineLabel.trailingAnchor, constant: 16)
+        ])
+        
+        // Description
+        NSLayoutConstraint.activate([
+            descriptionLabel.topAnchor.constraint(equalTo: welcomeHeadlineLabel.bottomAnchor, constant: 16),
+            descriptionLabel.leadingAnchor.constraint(equalTo: bottomSheet.leadingAnchor, constant: 23),
+            bottomSheet.trailingAnchor.constraint(equalTo: descriptionLabel.trailingAnchor, constant: 23)
+        ])
+        
+        // Buttons
+        NSLayoutConstraint.activate([
+            signUpButton.leadingAnchor.constraint(equalTo: bottomSheet.leadingAnchor, constant: 16),
+            bottomSheet.trailingAnchor.constraint(equalTo: signUpButton.trailingAnchor, constant: 16),
+            bottomSheet.bottomAnchor.constraint(equalTo: signUpButton.bottomAnchor, constant: 76),
+            signUpButton.heightAnchor.constraint(equalToConstant: 60),
+            
+            logInButton.topAnchor.constraint(equalTo: signUpButton.bottomAnchor, constant: 12),
+            logInButton.leadingAnchor.constraint(equalTo: signUpButton.leadingAnchor),
+            logInButton.trailingAnchor.constraint(equalTo: signUpButton.trailingAnchor),
+            logInButton.heightAnchor.constraint(equalToConstant: 60)
+        ])
+    }
+    
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        
+        // Make ellipse ring rounded with rotation (Figma: 355.5° = -4.5°)
+        ellipseRingView.layer.cornerRadius = ellipseRingView.bounds.height / 2
+        ellipseRingView.transform = CGAffineTransform(rotationAngle: -4.5 * .pi / 180.0)
     }
 
     // MARK: - actions

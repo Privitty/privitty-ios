@@ -9,7 +9,7 @@ public class FileTextCell: BaseMessageCell, ReusableCell {
 
     private var spacerHeight: NSLayoutConstraint?
     var spacerWidth: NSLayoutConstraint?
-    private var fileAccessStatus: PrvContext.FileAccessStatusData?
+    private var fileAccessStatusData: PrvContext.FileAccessStatusData?
 
     lazy var fileView: FileView = {
         let view = FileView()
@@ -32,7 +32,8 @@ public class FileTextCell: BaseMessageCell, ReusableCell {
     public override func prepareForReuse() {
         super.prepareForReuse()
         fileView.prepareForReuse()
-        fileAccessStatus = nil
+        fileAccessStatusData = nil
+        fileAccessStatus = nil // Clear parent's status too
     }
 
     override func update(dcContext: DcContext, msg: DcMsg, messageStyle: UIRectCorner, showAvatar: Bool, showName: Bool, searchText: String? = nil, highlight: Bool) {
@@ -43,8 +44,11 @@ public class FileTextCell: BaseMessageCell, ReusableCell {
             spacerHeight?.isActive = false
         }
         
-        fileView.configure(message: msg, status: fileAccessStatus)
+        fileView.configure(message: msg, status: fileAccessStatusData)
         a11yDcType = "\(String.localized("document")), \(fileView.configureAccessibilityLabel())"
+        
+        // IMPORTANT: Call super.update() AFTER setting fileAccessStatus
+        // so StatusView gets the correct status for icon display
         super.update(dcContext: dcContext,
                      msg: msg,
                      messageStyle: messageStyle,
@@ -55,7 +59,10 @@ public class FileTextCell: BaseMessageCell, ReusableCell {
     }
 
     public func applyFileAccessStatus(_ status: PrvContext.FileAccessStatusData?, message: DcMsg) {
-        fileAccessStatus = status
+        fileAccessStatusData = status
+        // Update parent's fileAccessStatus property for status icon display
+        // This MUST be set before update() is called
+        fileAccessStatus = status?.status
         fileView.configure(message: message, status: status)
     }
     

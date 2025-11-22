@@ -81,7 +81,7 @@ public class StatusView: UIView {
         stateView.isHidden = true
     }
 
-    public func update(message: DcMsg, tintColor: UIColor) {
+    public func update(message: DcMsg, tintColor: UIColor, fileAccessStatus: PrvContext.FileAccessStatus? = nil) {
         dateLabel.text = message.formattedSentDate()
         dateLabel.textColor = tintColor
         editedLabel.isHidden = !message.isEdited
@@ -108,28 +108,65 @@ public class StatusView: UIView {
             savedView.isHidden = true
         }
 
-        let state: Int
-        if message.downloadState == DC_DOWNLOAD_IN_PROGRESS {
-            state = Int(DC_DOWNLOAD_IN_PROGRESS)
-        } else if message.fromContactId == Int(DC_CONTACT_ID_SELF) {
-            state = message.state
+        // Check if this is a Privitty file with access status
+        if let status = fileAccessStatus, message.filename?.hasSuffix(".prv") == true {
+            // Show Privitty file access status icon
+            stateView.image = getFileAccessStatusIcon(for: status)?.maskWithColor(color: tintColor)
+            stateView.isHidden = stateView.image == nil
         } else {
-            state = 0
-        }
+            // Regular message delivery status
+            let state: Int
+            if message.downloadState == DC_DOWNLOAD_IN_PROGRESS {
+                state = Int(DC_DOWNLOAD_IN_PROGRESS)
+            } else if message.fromContactId == Int(DC_CONTACT_ID_SELF) {
+                state = message.state
+            } else {
+                state = 0
+            }
 
-        switch Int32(state) {
-        case DC_DOWNLOAD_IN_PROGRESS, DC_STATE_OUT_PENDING, DC_STATE_OUT_PREPARING:
-            stateView.image = UIImage(named: "ic_hourglass_empty_white_36pt")?.maskWithColor(color: tintColor)
-        case DC_STATE_OUT_DELIVERED:
-            stateView.image = UIImage(named: "ic_done_36pt")?.maskWithColor(color: tintColor)
-        case DC_STATE_OUT_MDN_RCVD:
-            stateView.image = UIImage(named: "ic_done_all_36pt")?.maskWithColor(color: tintColor)
-        case DC_STATE_OUT_FAILED:
-            stateView.image = UIImage(named: "ic_error_36pt")
-        default:
-            stateView.image = nil
+            switch Int32(state) {
+            case DC_DOWNLOAD_IN_PROGRESS, DC_STATE_OUT_PENDING, DC_STATE_OUT_PREPARING:
+                stateView.image = UIImage(named: "ic_hourglass_empty_white_36pt")?.maskWithColor(color: tintColor)
+            case DC_STATE_OUT_DELIVERED:
+                stateView.image = UIImage(named: "ic_done_36pt")?.maskWithColor(color: tintColor)
+            case DC_STATE_OUT_MDN_RCVD:
+                stateView.image = UIImage(named: "ic_done_all_36pt")?.maskWithColor(color: tintColor)
+            case DC_STATE_OUT_FAILED:
+                stateView.image = UIImage(named: "ic_error_36pt")
+            default:
+                stateView.image = nil
+            }
+            stateView.isHidden = stateView.image == nil
         }
-        stateView.isHidden = stateView.image == nil
+    }
+    
+    /// Returns the appropriate icon for file access status
+    private func getFileAccessStatusIcon(for status: PrvContext.FileAccessStatus) -> UIImage? {
+        switch status {
+        case .requested, .waitingOwnerAction:
+            // Loading/pending icon (spinner or clock)
+            return UIImage(systemName: "clock.fill")
+            
+        case .denied, .deleted:
+            // Warning icon (exclamation mark)
+            return UIImage(systemName: "exclamationmark.triangle.fill")
+            
+        case .revoked:
+            // Slash/block icon (circle with slash)
+            return UIImage(systemName: "nosign")
+            
+        case .expired:
+            // Warning icon (exclamation mark)
+            return UIImage(systemName: "exclamationmark.triangle.fill")
+            
+        case .active:
+            // Checkmark in circle
+            return UIImage(systemName: "checkmark.circle.fill")
+            
+        case .notFound:
+            // Question mark
+            return UIImage(systemName: "questionmark.circle.fill")
+        }
     }
 
     public static func getAccessibilityString(message: DcMsg) -> String {
